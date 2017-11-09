@@ -99,7 +99,8 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	}
 	def update(i: Int, j: Int, value: T): Unit = {
 		var row = this.matrix(i).updated(j, value)
-		this.matrix.zipWithIndex.map { case (index, elem) => if(index == i) row else elem }.toList
+		this.matrix = this.matrix.updated(i, row)
+		//this.matrix.zipWithIndex.map { case (index, elem) => if(index == i) row else elem }.toList
 	}
 	def replace(i: Int, value: T): Unit = {
 		
