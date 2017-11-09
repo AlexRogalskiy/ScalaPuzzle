@@ -8,4 +8,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Managed libraries, compiled sources
+/lib_managed
+/src_managed
+/project/boot
 /target
