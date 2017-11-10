@@ -34,11 +34,55 @@ object Puzzle extends AppInitializer {
 
 trait AppInitializer {
 	//def loadDataFromFile(file: java.io.File): List[List[Rectangle]]
+	import scala.io.Source
+	import scala.collection.mutable.ListBuffer
+	type OptionMap = Map[Symbol, Any]
 
+	val usage = """
+		Usage: puzzle -file filename
+	"""
 	def main(args: Array[String]) {
     	println("Initializing data set...")
-    	for (arg <- args if arg startsWith "-") println(" " + (arg substring 1))
+    	if (args.length == 0) {
+	        println(usage)
+	        sys.exit(1)
+	    }
+    	for (arg <- args if arg startsWith "--file") println(" " + (arg substring "--file".length))
+    	val options = nextOption(Map(), args.to[List])
+    	println(options)
     }
+
+    private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+      	def isSwitch(s: String) = (s(0) == '-')
+	    list match {
+	       	case Nil => map
+	       	case "--max-size" :: value :: tail => nextOption(map ++ Map('maxsize -> value.toInt), tail)
+	       	case "--min-size" :: value :: tail => nextOption(map ++ Map('minsize -> value.toInt), tail)
+	       	case "--file" :: value :: tail => nextOption(map ++ Map('file -> value.toString), tail)
+	       	case "--pattern" :: value :: tail => nextOption(map ++ Map('pattern -> value.toString), tail)
+	       	case "--verbose" :: tail => nextOption(map ++ Map('verbose -> true), tail)
+	       	case string :: opt2 :: tail if isSwitch(opt2) => nextOption(map ++ Map('infile -> string), list.tail)
+	       	case string :: Nil =>  nextOption(map ++ Map('infile -> string), list.tail)
+	       	case option :: tail => println("Unknown option = " + option)
+	       						   sys.exit(1) 
+	    }
+	}
+
+	private def fileToList(file: java.io.File): List[String] = {
+    	return Source.fromFile(file).getLines.toList
+    }
+
+	private def loadDataFromFile(file: String, pattern: String): List[String] = {
+		var ls = new ListBuffer[String]()
+		for (line <- Source.fromFile(file).getLines) {
+			if (line.trim.matches(pattern)) {
+				ls += line.trim
+		    	print(line.length + " : " + line.trim)
+		    }
+		}
+		return ls.to[List]
+		//val lines = Source.fromFile(args(0)).getLines.toList
+	}
 
     def getDimension(n: Int): Int = {
     	var p: Int = 0;
@@ -110,7 +154,11 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
   	}
 	def sum(): Int = matrix match {
 		case matrix: Matrix =>
-		    1
+			var res: Int = 0
+		    for(row <- matrix)
+		    	for(elem <- row)
+		    		res += elem.sum
+		    return res
 	}
 	def update(i: Int, j: Int, value: T): Unit = {
 		ensure((m: Unit) => rowCount(matrix) >= i && colCount(matrix) >= j, {
@@ -256,7 +304,7 @@ class Rectangle (
  	override def *(value: Int) = multiply(this, value)
  	override def +(rectangle2: Rectangle) = add(this, rectangle2)
  	override def -(rectangle2: Rectangle) = substract(this, rectangle2)
-	override def sum(): Int = {
+	override def sum: Int = {
 		return (this.lBottom + this.lTop + this.rTop + this.rBottom)
 	}
 	override def filter(rectangles: Vector[Rectangle]) (f: (Rectangle) => Boolean): Vector[Rectangle] = (
