@@ -42,7 +42,7 @@ trait AppInitializer {
 					(str: String) => { str.trim.matches("\\d{1}\\s+\\d\\s+\\d\\s+\\d") },
 					(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
 		)
-		var rectList = list.map((elem) => new Rectangle(elem(2), elem(0), elem(1), elem(3)))
+		var rectList = list.map(elem => new Rectangle(elem(2), elem(0), elem(1), elem(3)))
 		val matrixDim = getDimension(rectList.length)
 		var rectMatrix = CMatrix[Rectangle](matrixDim, matrixDim)
 		// var data = (
@@ -53,6 +53,7 @@ trait AppInitializer {
 		// 	for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
 		// ).toList
 		rectMatrix.fill(rectList)
+		rectMatrix.runTask()
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
 		// 		new Rectangle(1, 2, 3, 4)
@@ -62,7 +63,7 @@ trait AppInitializer {
 		// println(A)
 		// rectMatrix.fill(A)
 		//println(data.take(1))
-		println(rectMatrix)
+		//println(rectMatrix)
     }
 
     def nextOption(map: OptionMap, list: List[String]): OptionMap = {
@@ -154,27 +155,38 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 			this.foreach((t: T) => { value })
 		}
   	}
-	def fill(list: List[T]): Unit = matrix match {
-		case matrix: Matrix => {
-			var result = new ListBuffer[T]()
-			if(this.size > list.length) {
-				var delta = (this.size - list.length) / 2
-				var c = 0
-				while(c < delta) {
-					result += null; c += 1
-				}
-				list.map(result += _)
-				while(c <= this.size - list.length - delta) {
-					result += null; c += 1
-				}
-			} else {
-				list.take(this.size).map(result += _)
-			}
-			result.to[List].zipWithIndex.foreach {
-				case (elem, i) => this.insert(i, elem)
+	def fill(list: List[T]): Unit = {
+		def padList(buffer: ListBuffer[T], delta: Int, value: T): Unit = {
+			var c = 0
+			while(c < delta) {
+				buffer += value;
+				c += 1
 			}
 		}
-  	}
+		matrix match {
+			case matrix: Matrix => {
+				var result = new ListBuffer[T]()
+				if (this.size > list.length) {
+					var delta = (this.size - list.length) / 2
+					padList(result, delta / 2, null)
+					var (left, right) = list.splitAt(colCount - delta)
+					left.map(result += _)
+					padList(result, (delta - delta / 2), null)
+					var last = (right.length % colCount)
+					var (left_, right_) = right.splitAt(right.length - last)
+					left_.map(result += _)
+					padList(result, (this.size - list.length - delta) / 2, null)
+					right_.map(result += _)
+					padList(result, (this.size - list.length - delta) / 2, null)
+				} else {
+					list.take(this.size).map(result += _)
+				}
+				result.to[List].zipWithIndex.foreach {
+					case (elem, i) => this.insert(i, elem)
+				}
+			}
+	  	}
+	}
   	def foreach(f: (T) => T): Unit = {
   		this.matrix = (for(row <- this.matrix) yield
  			(for(elem <- row) yield f(elem)).to[List]
@@ -197,6 +209,21 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	}
 	def insert(i: Int, value: T): Unit = {
 		this.update(i / rowCount, i % colCount, value)
+	}
+	def runTask(): Int = matrix match {
+		case matrix: Matrix => {
+			this.matrix.zipWithIndex.foreach {
+				case(elem, i) => {
+					var count = 0
+					elem.zipWithIndex.foreach {
+						case(elem2, j) => {
+							println(elem2)
+						}
+					}
+				}
+			}
+			return 1
+		} 
 	}
 
 	// private methods
