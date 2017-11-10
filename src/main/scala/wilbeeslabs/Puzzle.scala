@@ -1,87 +1,114 @@
 package com.wildbeeslabs
 
 object Puzzle extends AppInitializer {
-	// val a = Array(2, 3, 5, 7, 11) 
-	// val result = for (elem <- a if elem % 2 == 0) yield 2 * elem
-	// for (elem <- result)  println(elem)
-	// val positionsToRemove = for (i <- a.indices if a(i) < 0) yield i 
-
-	// val triangle = new Array[Array[Int]](12)
-	// for (i <- triangle.indices)
-	// 	triangle(i) = new Array[Int](i + 1)
-
-	val matrixDim = getDimension(15)
-	var rectMatrix = CMatrix[Rectangle](matrixDim, matrixDim)
-	// var data = (
-	// 	for(i <- 1 to matrixDim) yield
- // 			(for(j <- 1 to matrixDim) yield new Rectangle(1, 2, 3, 4)).toList
- // 	).toList
-	var data = (
-		for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
-	).toList
-	rectMatrix.fill(data)
-	rectMatrix.update(1, 1, null)
-	// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
-	// 		new Rectangle(1, 2, 3, 4)
- // 			//if(i == j) 1 else 0
- // 		}
-	// }
-	// println(A)
-	// rectMatrix.fill(A)
-	//println(data.take(1))
-	println(rectMatrix)
+	/* Default usage mapping */
+	val usage = """
+		Usage: puzzle --file filename
+	"""
+	def main(args: Array[String]): Unit = {
+    	if (args.length == 0) {
+	        println(usage)
+	        return//sys.exit(0)
+	    }
+    	val options = nextOption(Map().withDefaultValue("Not found"), args.to[List])
+    	process(options)
+    }
 }
 
 trait AppInitializer {
-	//def loadDataFromFile(file: java.io.File): List[List[Rectangle]]
+	import scala.io.Codec
 	import scala.io.Source
+	import scala.io.BufferedSource
 	import scala.collection.mutable.ListBuffer
+
+	implicit val decoder = Codec.UTF8.decoder
+	decoder.onMalformedInput(java.nio.charset.CodingErrorAction.IGNORE)
+	decoder.onUnmappableCharacter(java.nio.charset.CodingErrorAction.IGNORE)
+
 	type OptionMap = Map[Symbol, Any]
 
-	val usage = """
-		Usage: puzzle -file filename
-	"""
-	def main(args: Array[String]) {
-    	println("Initializing data set...")
-    	if (args.length == 0) {
-	        println(usage)
-	        sys.exit(1)
-	    }
-    	for (arg <- args if arg startsWith "--file") println(" " + (arg substring "--file".length))
-    	val options = nextOption(Map(), args.to[List])
-    	println(options)
+	def process(map: OptionMap): Unit = {
+	// val a = Array(2, 3, 5, 7, 11) 
+		// val result = for (elem <- a if elem % 2 == 0) yield 2 * elem
+		// for (elem <- result)  println(elem)
+		// val positionsToRemove = for (i <- a.indices if a(i) < 0) yield i 
+
+		// val triangle = new Array[Array[Int]](12)
+		// for (i <- triangle.indices)
+		// 	triangle(i) = new Array[Int](i + 1)
+
+		var list = loadDataFromFile[List[Int]](
+					map.getOrElse('file, "default.txt").toString,
+					(str: String) => { str.trim.matches("\\d{1}\\s+\\d\\s+\\d\\s+\\d") },
+					(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
+		)
+		var rectList = list.map((elem) => new Rectangle(elem(2), elem(0), elem(1), elem(3)))
+		val matrixDim = getDimension(rectList.length)
+		var rectMatrix = CMatrix[Rectangle](matrixDim, matrixDim)
+		// var data = (
+		// 	for(i <- 1 to matrixDim) yield
+	 // 			(for(j <- 1 to matrixDim) yield new Rectangle(1, 2, 3, 4)).toList
+	 // 	).toList
+		// var data = (
+		// 	for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
+		// ).toList
+		rectMatrix.fill(rectList)
+		//rectMatrix.update(1, 1, null)
+		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
+		// 		new Rectangle(1, 2, 3, 4)
+	 // 			//if(i == j) 1 else 0
+	 // 		}
+		// }
+		// println(A)
+		// rectMatrix.fill(A)
+		//println(data.take(1))
+		println(rectMatrix)
     }
 
-    private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+    def nextOption(map: OptionMap, list: List[String]): OptionMap = {
       	def isSwitch(s: String) = (s(0) == '-')
 	    list match {
 	       	case Nil => map
-	       	case "--max-size" :: value :: tail => nextOption(map ++ Map('maxsize -> value.toInt), tail)
-	       	case "--min-size" :: value :: tail => nextOption(map ++ Map('minsize -> value.toInt), tail)
 	       	case "--file" :: value :: tail => nextOption(map ++ Map('file -> value.toString), tail)
 	       	case "--pattern" :: value :: tail => nextOption(map ++ Map('pattern -> value.toString), tail)
 	       	case "--verbose" :: tail => nextOption(map ++ Map('verbose -> true), tail)
 	       	case string :: opt2 :: tail if isSwitch(opt2) => nextOption(map ++ Map('infile -> string), list.tail)
 	       	case string :: Nil =>  nextOption(map ++ Map('infile -> string), list.tail)
-	       	case option :: tail => println("Unknown option = " + option)
-	       						   sys.exit(1) 
+	       	case option :: tail => println("Unknown option = " + option); return Map()
 	    }
 	}
 
-	private def fileToList(file: java.io.File): List[String] = {
-    	return Source.fromFile(file).getLines.toList
+	def getFileContent(is: java.io.InputStream): BufferedSource = {
+    	return Source.fromInputStream(is)(decoder)
     }
 
-	private def loadDataFromFile(file: String, pattern: String): List[String] = {
-		var ls = new ListBuffer[String]()
-		for (line <- Source.fromFile(file).getLines) {
-			if (line.trim.matches(pattern)) {
-				ls += line.trim
-		    	print(line.length + " : " + line.trim)
+	def getFileContent(file: java.io.File): List[String] = {
+		if (!file.exists() || !file.isFile()) {
+			return Nil
+		}
+    	return Source.fromFile(file)(decoder).getLines.to[List]
+    }
+
+	def loadDataFromFile[A] (fileName: String, predicat: (String) => Boolean, process: (String) => A): List[A] = {
+		var result = new ListBuffer[A]()
+		var file = new java.io.File(fileName)
+		if(!file.exists() && !file.isFile()) {
+			return Nil
+		}
+		for (line <- Source.fromFile(file)(decoder).getLines) {
+			if (predicat(line)) {
+				result += process(line)
 		    }
 		}
-		return ls.to[List]
-		//val lines = Source.fromFile(args(0)).getLines.toList
+		return result.to[List]
+	}
+
+	def toInt(s: String): Option[Int] = {
+  		try {
+	    	Some(s.toInt)
+  		} catch {
+    		case ex: Exception => None
+  		}
 	}
 
     def getDimension(n: Int): Int = {
@@ -106,6 +133,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	//private var matrix = Array.ofDim[Shape] (numRows, numCols)
 	//private var matrix: Option[Array[Array[Shape]]] = None
 
+	/* public methods */
 	def apply(i: Int, j: Int) = this.matrix(i)(j)
 	def this() = this(0, 0)
 	def T: Unit = transpose(this.matrix)
@@ -128,21 +156,21 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
   	}
 	def fill(list: List[T]): Unit = matrix match {
 		case matrix: Matrix => {
-			var ls = new ListBuffer[T]()
+			var result = new ListBuffer[T]()
 			if(this.size > list.length) {
 				var delta = (this.size - list.length) / 2
 				var c = 0
 				while(c < delta) {
-					ls += null; c += 1
+					result += null; c += 1
 				}
-				list.map(ls += _)
+				list.map(result += _)
 				while(c <= this.size - list.length - delta) {
-					ls += null; c += 1
+					result += null; c += 1
 				}
 			} else {
-				list.take(this.size).map(ls += _)
+				list.take(this.size).map(result += _)
 			}
-			ls.to[List].zipWithIndex.foreach {
+			result.to[List].zipWithIndex.foreach {
 				case (elem, i) => this.insert(i, elem)
 			}
 		}
@@ -262,14 +290,14 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		}
   	}
 
-  	private def flatten(list: List[_]) : List[_] =
+  	private def flatten(list: List[_]): List[_] =
   		list flatMap {
           	case list1: List[_] => flatten(list1)
           	case otherwise => List(otherwise)
     }
 
-    private def swap[T](elem1: T, elem2: T, list: List[T]): List[T] =
-    	list.map {
+    private def swap[T] (elem1: T, elem2: T, list: List[T]): List[T] =
+    	list map {
 			case item if item == elem1 => elem2
     		case item if item == elem2 => elem1
     		//case item: List[T] => swap(elem1, elem2, item)
