@@ -17,9 +17,9 @@ object Puzzle extends AppInitializer {
  // 			(for(j <- 1 to matrixDim) yield new Rectangle(1, 2, 3, 4)).toList
  // 	).toList
 	var data = (
-		for(i <- 1 to matrixDim) yield new Rectangle(1, 2, 3, 4)
+		for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
 	).toList
-	rectMatrix.fill(data(0))
+	rectMatrix.fill(data)
 	rectMatrix.update(1, 1, null)
 	// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
 	// 		new Rectangle(1, 2, 3, 4)
@@ -28,6 +28,7 @@ object Puzzle extends AppInitializer {
 	// }
 	// println(A)
 	// rectMatrix.fill(A)
+	//println(data.take(1))
 	println(rectMatrix)
 }
 
@@ -52,6 +53,7 @@ trait AppInitializer {
 
 class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	import utils.ConditionCheck._
+	import scala.collection.mutable.ListBuffer
 	/* Matrix type aliases */
 	type Row = List[T]
 	type Matrix = List[Row]
@@ -62,10 +64,11 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	def apply(i: Int, j: Int) = this.matrix(i)(j)
 	def this() = this(0, 0)
-	def T(): Unit = transpose(this.matrix)
-	def rowCount(): Int = this.matrix.length
- 	def colCount(): Int = this.matrix.head.length
- 	def isSquare(): Boolean = (rowCount == colCount)
+	def T: Unit = transpose(this.matrix)
+	def rowCount: Int = this.matrix.length
+ 	def colCount: Int = this.matrix.head.length
+ 	def size: Int = rowCount * colCount
+ 	def isSquare: Boolean = (rowCount == colCount)
  	def minor(i: Int, j: Int): Unit = minorMatrix(matrix, i, j)
  	def beside(matrix2: CMatrix[T]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
   	def above(matrix2: CMatrix[T]): Unit = this.matrix ::: matrix2.matrix
@@ -81,36 +84,50 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
   	}
 	def fill(list: List[T]): Unit = matrix match {
 		case matrix: Matrix => {
-			//ensure((m: Matrix) => rowCount(m) == rowCount(matrix2) && colCount(m) == colCount(matrix2),
-				list.zipWithIndex.foreach {
-					case (elem, i) => this.replace(i, elem)
+			var ls = new ListBuffer[T]()
+			if(this.size > list.length) {
+				var delta = (this.size - list.length) / 2
+				var c = 0
+				while(c < delta) {
+					ls += null; c += 1
 				}
-			//)
+				list.map(ls += _)
+				while(c <= this.size - list.length - delta) {
+					ls += null; c += 1
+				}
+			} else {
+				list.take(this.size).map(ls += _)
+			}
+			ls.to[List].zipWithIndex.foreach {
+				case (elem, i) => this.insert(i, elem)
+			}
 		}
   	}
   	def foreach(f: (T) => T): Unit = {
   		this.matrix = (for(row <- this.matrix) yield
- 			(for(elem <- row) yield f(elem)).toList
- 		).toList
+ 			(for(elem <- row) yield f(elem)).to[List]
+ 		).to[List]
   	}
-	def getSumOfSquares(): Int = matrix match {
+	def sum(): Int = matrix match {
 		case matrix: Matrix =>
 		    1
 	}
 	def update(i: Int, j: Int, value: T): Unit = {
-		var row = this.matrix(i).updated(j, value)
-		this.matrix = this.matrix.updated(i, row)
-		//this.matrix.zipWithIndex.map { case (index, elem) => if(index == i) row else elem }.toList
+		ensure((m: Unit) => rowCount(matrix) >= i && colCount(matrix) >= j, {
+				var row = this.matrix(i).updated(j, value)
+				this.matrix = this.matrix.updated(i, row)
+			}
+		)
 	}
-	def replace(i: Int, value: T): Unit = {
-		
+	def insert(i: Int, value: T): Unit = {
+		this.update(i / rowCount, i % colCount, value)
 	}
 
 	// private methods
 	private def init(numRows: Int, numCols: Int) (f: (Int, Int) => T): Matrix = (
  		for(i <- 1 to numRows) yield
- 			(for(j <- 1 to numCols) yield f(i, j)).toList
- 	).toList
+ 			(for(j <- 1 to numCols) yield f(i, j)).to[List]
+ 	).to[List]
 
 	private def multiplyRows(row1: Row, row2: Row): T = {
 		requireEquals(row1.length, row2.length)
@@ -118,7 +135,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	}
 
 	private def transpose(matrix: Matrix): Matrix = {
-	 	if( matrix.head.isEmpty ) Nil
+	 	if( matrix.head.isEmpty ) null
 	 	else matrix.map(_.head) :: transpose(matrix.map(_.tail))
 	}
 
@@ -142,7 +159,9 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	private def addRows(row1: Row, row2: Row): Unit = {
 		requireEquals(row1.length, row2.length)
-    	row1.zip(row2).map{ t: (T, T) => t._1 + t._2 }
+    	row1.zip(row2).map{ t: (T, T) =>
+    		t._1 + t._2
+    	}
 	}
 
 	private def add(matrix1: Matrix, matrix2: Matrix): Unit = {
@@ -155,7 +174,9 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	private def substractRows(row1: Row, row2: Row): Unit = {
 		requireEquals(row1.length, row2.length)
-    	row1.zip(row2).map{ t: (T, T) => t._1 - t._2 }
+    	row1.zip(row2).map{ t: (T, T) =>
+    		t._1 - t._2
+    	}
 	}
 
 	private def substract(matrix1: Matrix, matrix2: Matrix): Unit = {
@@ -179,7 +200,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
   	}
 
   	private def reduce[A] (list: List[A], i: Int): List[A] = {
-	    if(i == 0) {
+	    if ( i == 0 ) {
 	      	list.tail
 	    } else {
 	    	val n = list.length
@@ -188,9 +209,9 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	      	if( i == n-1 ) {
 				list.dropRight(1)
 			} else {
-				list.dropRight(n-i) ::: list.drop(i+1)
+				list.dropRight(n - i) ::: list.drop(i + 1)
 			}
-	    }
+		}
   	}
 
   	private def flatten(list: List[_]) : List[_] =
@@ -221,7 +242,7 @@ abstract class Shape[T <: Shape[T]] {
 	def *(value: Int): T
 	def +(shape2: T): T
  	def -(shape2: T): T
- 	def filter(shapes: List[T]) (f: (T) => Boolean): List[T]
+ 	def filter(shapes: Vector[T]) (f: (T) => Boolean): Vector[T]
 }
 
 class Rectangle (
@@ -238,10 +259,10 @@ class Rectangle (
 	override def sum(): Int = {
 		return (this.lBottom + this.lTop + this.rTop + this.rBottom)
 	}
-	override def filter(rectangles: List[Rectangle]) (f: (Rectangle) => Boolean): List[Rectangle] = (
+	override def filter(rectangles: Vector[Rectangle]) (f: (Rectangle) => Boolean): Vector[Rectangle] = (
 		for (rectangle <- rectangles; if f(rectangle))
 			yield rectangle
-	).toList
+	).to[Vector]
 
 	private def multiply(rectangle2: Rectangle): Unit = {
 		this.lBottom *= rectangle2.lBottom
