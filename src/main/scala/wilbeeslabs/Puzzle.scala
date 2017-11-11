@@ -53,9 +53,9 @@ trait AppInitializer {
 		// 	for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
 		// ).toList
 		rectMatrix.fill(rectList)
-		rectMatrix.runTask()
-
-
+		rectMatrix.runTask((r1, r2) => { 
+			(r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10)
+		})
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
 		// 		new Rectangle(1, 2, 3, 4)
@@ -213,17 +213,19 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	def insert(i: Int, value: T): Unit = {
 		this.update(i / rowCount, i % colCount, value)
 	}
-	def runTask(): Int = {
+	def runTask(f: (T, T) => Boolean): Int = {
 		def isValid(i1: Int, j1: Int, i2: Int, j2: Int): Boolean = {
-			ensure((m: Unit) => rowCount(matrix) >= i1 && colCount(matrix) >= j1 && rowCount(matrix) >= i2 && colCount(matrix) >= j2, {
+			if (rowCount > i1 && colCount > j1 && rowCount > i2 && colCount > j2) {
+			//ensure((m: Unit) => rowCount(matrix) >= i1 && colCount(matrix) >= j1 && rowCount(matrix) >= i2 && colCount(matrix) >= j2, {
 				var r1 = this.matrix(i1)(j1)
 				var r2 = this.matrix(i2)(j2)
-				if (r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10) {
-					println("ok")
-					return true
+				if(null != r1 && null != r2) {
+					return f(r1, r2)
 				}
-			})
-		} 
+			//})
+			}
+			return false
+		}
 		matrix match {
 			case matrix: Matrix => {
 				this.matrix.zipWithIndex.foreach {
@@ -231,10 +233,11 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 						var count = 0
 						elem.zipWithIndex.foreach {
 							case(elem2, j) => {
-								if (null != elem2) {
-									isValid(i, j, i+1, j+1)
-									println(elem2)
-								}
+								//if (null != elem2) {
+									if(isValid(i, j, i+1, j+1)) {
+										println(elem2)
+									}
+								//}
 							}
 						}
 					}
@@ -384,10 +387,10 @@ class Rectangle (
 	private var rightBottom: Int) extends Shape[Rectangle] { //extends Comparable[Rectangle];
 
 	def this() = this(0, 0, 0, 0)
-	def lBottom: Int = lBottom
-	def lTop: Int = lTop
-	def rTop: Int = rTop
-	def rBottom: Int = rBottom
+	def lBottom: Int = leftBottom
+	def lTop: Int = leftTop
+	def rTop: Int = rightTop
+	def rBottom: Int = rightBottom
  	override def *(rectangle2: Rectangle) = multiply(this, rectangle2)
  	override def *(value: Int) = multiply(this, value)
  	override def +(rectangle2: Rectangle) = add(this, rectangle2)
