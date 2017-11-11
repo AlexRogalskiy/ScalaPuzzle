@@ -54,6 +54,8 @@ trait AppInitializer {
 		// ).toList
 		rectMatrix.fill(rectList)
 		rectMatrix.runTask()
+
+
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
 		// 		new Rectangle(1, 2, 3, 4)
@@ -194,36 +196,52 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
   	}
 	def sum(): Int = matrix match {
 		case matrix: Matrix =>
-			var res: Int = 0
+			var res = 0
 		    for(row <- matrix)
 		    	for(elem <- row)
-		    		res += elem.sum
+		    		if(null != elem) {
+		    			res += elem.sum
+		    		}
 		    return res
 	}
 	def update(i: Int, j: Int, value: T): Unit = {
 		ensure((m: Unit) => rowCount(matrix) >= i && colCount(matrix) >= j, {
-				var row = this.matrix(i).updated(j, value)
-				this.matrix = this.matrix.updated(i, row)
-			}
-		)
+			var row = this.matrix(i).updated(j, value)
+			this.matrix = this.matrix.updated(i, row)
+		})
 	}
 	def insert(i: Int, value: T): Unit = {
 		this.update(i / rowCount, i % colCount, value)
 	}
-	def runTask(): Int = matrix match {
-		case matrix: Matrix => {
-			this.matrix.zipWithIndex.foreach {
-				case(elem, i) => {
-					var count = 0
-					elem.zipWithIndex.foreach {
-						case(elem2, j) => {
-							println(elem2)
+	def runTask(): Int = {
+		def isValid(i1: Int, j1: Int, i2: Int, j2: Int): Boolean = {
+			ensure((m: Unit) => rowCount(matrix) >= i1 && colCount(matrix) >= j1 && rowCount(matrix) >= i2 && colCount(matrix) >= j2, {
+				var r1 = this.matrix(i1)(j1)
+				var r2 = this.matrix(i2)(j2)
+				if (r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10) {
+					println("ok")
+					return true
+				}
+			})
+		} 
+		matrix match {
+			case matrix: Matrix => {
+				this.matrix.zipWithIndex.foreach {
+					case(elem, i) => {
+						var count = 0
+						elem.zipWithIndex.foreach {
+							case(elem2, j) => {
+								if (null != elem2) {
+									isValid(i, j, i+1, j+1)
+									println(elem2)
+								}
+							}
 						}
 					}
 				}
-			}
-			return 1
-		} 
+				return 1
+			} 
+		}
 	}
 
 	// private methods
@@ -234,7 +252,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	private def multiplyRows(row1: Row, row2: Row): T = {
 		requireEquals(row1.length, row2.length)
-		row1.zip(row2).map{ t: (T, T) => t._1 * t._2 }.reduceLeft(_ + _)
+		row1.zip(row2).map { t: (T, T) => t._1 * t._2 }.reduceLeft(_ + _)
 	}
 
 	private def transpose(matrix: Matrix): Matrix = {
@@ -248,7 +266,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	private def multiply(matrix: Matrix, row: Row): Unit = {
 	    requireEquals( rowCount(matrix), row.length )
-	    matrix.map{ multiplyRows(_, row) } reduceLeft ( _ + _ )
+	    matrix.map { multiplyRows(_, row) } reduceLeft ( _ + _ )
 	}
 
  	private def multiplyMatrices(matrix1: Matrix, matrix2: Matrix): Unit = {
@@ -262,14 +280,14 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	private def addRows(row1: Row, row2: Row): Unit = {
 		requireEquals(row1.length, row2.length)
-    	row1.zip(row2).map{ t: (T, T) =>
+    	row1.zip(row2).map { t: (T, T) =>
     		t._1 + t._2
     	}
 	}
 
 	private def add(matrix1: Matrix, matrix2: Matrix): Unit = {
 		matrix1.zip(matrix2).map{ rows: (Row, Row) =>
-		    rows._1.zip( rows._2 ).map{ items: (T, T) =>
+		    rows._1.zip( rows._2 ).map { items: (T, T) =>
 		      	items._1 + items._2
 		    }
 	  	}
@@ -277,14 +295,14 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 
 	private def substractRows(row1: Row, row2: Row): Unit = {
 		requireEquals(row1.length, row2.length)
-    	row1.zip(row2).map{ t: (T, T) =>
+    	row1.zip(row2).map { t: (T, T) =>
     		t._1 - t._2
     	}
 	}
 
 	private def substract(matrix1: Matrix, matrix2: Matrix): Unit = {
-		matrix1.zip(matrix2).map{ rows: (Row, Row) =>
-		    rows._1.zip( rows._2 ).map{ items: (T, T) =>
+		matrix1.zip(matrix2).map { rows: (Row, Row) =>
+		    rows._1.zip( rows._2 ).map { items: (T, T) =>
 		      	items._1 - items._2
 		    }
 	  	}
@@ -317,18 +335,29 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		}
   	}
 
-  	private def flatten(list: List[_]): List[_] =
+  	private def flatten(list: List[_]): List[_] = {
   		list flatMap {
           	case list1: List[_] => flatten(list1)
           	case otherwise => List(otherwise)
+    	}
     }
 
-    private def swap[T] (elem1: T, elem2: T, list: List[T]): List[T] =
+    private def swapByIndex(i1: Int, j1: Int, i2: Int, j2: Int): Unit = {
+    	var (temp1, temp2) = (this.matrix(i1)(j1), this.matrix(i2)(j2))
+    	this.update(i1, j1, temp2)
+    	this.update(i2, j2, temp1)
+    	//var (row1, row2) = (this.matrix(i1).updated(j1, temp2), this.matrix(i2).updated(j2, temp1))
+		//this.matrix = this.matrix.updated(i1, row1)
+		//this.matrix = this.matrix.updated(i2, row2)
+	}
+
+    private def swapByValue[T] (elem1: T, elem2: T, list: List[T]): List[T] = {
     	list map {
 			case item if item == elem1 => elem2
     		case item if item == elem2 => elem1
     		//case item: List[T] => swap(elem1, elem2, item)
     		case item => item
+		}
 	}
 
   	// override methods
@@ -349,12 +378,16 @@ abstract class Shape[T <: Shape[T]] {
 }
 
 class Rectangle (
-	private var lBottom: Int,
-	private var lTop: Int,
-	private var rTop: Int,
-	private var rBottom: Int) extends Shape[Rectangle] { //extends Comparable[Rectangle];
+	private var leftBottom: Int,
+	private var leftTop: Int,
+	private var rightTop: Int,
+	private var rightBottom: Int) extends Shape[Rectangle] { //extends Comparable[Rectangle];
 
 	def this() = this(0, 0, 0, 0)
+	def lBottom: Int = lBottom
+	def lTop: Int = lTop
+	def rTop: Int = rTop
+	def rBottom: Int = rBottom
  	override def *(rectangle2: Rectangle) = multiply(this, rectangle2)
  	override def *(value: Int) = multiply(this, value)
  	override def +(rectangle2: Rectangle) = add(this, rectangle2)
@@ -368,31 +401,31 @@ class Rectangle (
 	).to[Vector]
 
 	private def multiply(rectangle2: Rectangle): Unit = {
-		this.lBottom *= rectangle2.lBottom
-		this.lTop *= rectangle2.lTop
-		this.rTop *= rectangle2.rTop
-		this.rBottom *= rectangle2.rBottom
+		this.leftBottom *= rectangle2.lBottom
+		this.leftTop *= rectangle2.lTop
+		this.rightTop *= rectangle2.rTop
+		this.rightBottom *= rectangle2.rBottom
 	}
 
 	private def multiply(value: Int): Unit = {
-		this.lBottom *= value
-		this.lTop *= value
-		this.rTop *= value
-		this.rBottom *= value
+		this.leftBottom *= value
+		this.leftTop *= value
+		this.rightTop *= value
+		this.rightBottom *= value
 	}
 
 	private def add(rectangle2: Rectangle): Unit = {
-		this.lBottom += rectangle2.lBottom
-		this.lTop += rectangle2.lTop
-		this.rTop += rectangle2.rTop
-		this.rBottom += rectangle2.rBottom
+		this.leftBottom += rectangle2.lBottom
+		this.leftTop += rectangle2.lTop
+		this.rightTop += rectangle2.rTop
+		this.rightBottom += rectangle2.rBottom
 	}
 
  	private def substract(rectangle2: Rectangle): Unit = {
-		this.lBottom -= rectangle2.lBottom
-		this.lTop -= rectangle2.lTop
-		this.rTop -= rectangle2.rTop
-		this.rBottom -= rectangle2.rBottom
+		this.leftBottom -= rectangle2.lBottom
+		this.leftTop -= rectangle2.lTop
+		this.rightTop -= rectangle2.rTop
+		this.rightBottom -= rectangle2.rBottom
  	}
 
 	private def multiply(rectangle1: Rectangle, rectangle2: Rectangle): Rectangle = {
