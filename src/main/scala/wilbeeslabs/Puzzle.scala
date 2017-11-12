@@ -11,9 +11,11 @@ object Puzzle extends AppInitializer {
 	>>> Copyright ©<<<
 	"""
 	def main(args: Array[String]): Unit = {
-		println(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)).filter(_ != null).permutations.toList)
-		println(permutate[Rectangle](List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4))))
+		//println(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)).filter(_ != null).permutations.toList)
+		//println(permutate[Rectangle](List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4))))
 
+		//val lol = List(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)), List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)))
+		//println(lol.flatten.filter(null != _).permutations.toList)
     	if (args.length == 0) {
 	        println(usage)
 	        return//sys.exit(0)
@@ -44,7 +46,6 @@ trait AppInitializer {
 		// val triangle = new Array[Array[Int]](12)
 		// for (i <- triangle.indices)
 		// 	triangle(i) = new Array[Int](i + 1)
-
 		var list = loadDataFromFile[List[Int]](
 					map.getOrElse('file, "default.txt").toString,
 					(str: String) => { str.trim.matches("\\d{1}\\s+\\d\\s+\\d\\s+\\d") },
@@ -60,10 +61,13 @@ trait AppInitializer {
 		// var data = (
 		// 	for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
 		// ).toList
+
 		rectMatrix.fill(rectList)
-		rectMatrix.runTask((r1, r2) => { 
-			(r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10)
-		})
+		// rectMatrix.runTask((r1, r2) => { 
+		// 	(r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10)
+		// })
+		var cc = rectMatrix.permutate((r: List[Rectangle]) => true, (r: Rectangle) => null != r)
+		println(cc.length)
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
 		// 		new Rectangle(1, 2, 3, 4)
@@ -131,17 +135,6 @@ trait AppInitializer {
     	}
     	return p
     }
-
-    def permutate[A] (list: List[A]): List[List[A]] = {
-	    list match {
-		   case List(elem) => List(List(elem))
-		   case l =>
-		    for {
-		       i <- List.range(0, l.length)
-		       p <- permutate(l.slice(0, i) ++ l.slice(i + 1, l.length))
-		    } yield l(i) :: p
-		}
-	}
 }
 
 class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
@@ -166,7 +159,8 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
  	def minor(i: Int, j: Int): Unit = minorMatrix(matrix, i, j)
  	def beside(matrix2: CMatrix[T]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
   	def above(matrix2: CMatrix[T]): Unit = this.matrix ::: matrix2.matrix
-  	def sortRows(f: (Row) => Boolean, s: (Row, Row) => Boolean): Matrix = filterAndSortBy[Row](this.matrix, f, s)
+  	def sortRows(filter: (Row) => Boolean = (Row) => true, sort: (Row, Row) => Boolean): Matrix = filterAndSortBy[Row](this.matrix, filter, sort)
+  	def permutate(filter1: (Row) => Boolean = (Row) => true, filter2: (T) => Boolean = (T) => true): Matrix = permutateMatrix(this.matrix, filter1, filter2)
  	def *(matrix2: CMatrix[T]): Unit = multiplyMatrices(this.matrix, matrix2.matrix)
  	def *(value: Int): Unit = multiply(this.matrix, value)
  	def +(matrix2: CMatrix[T]): Unit = add(this.matrix, matrix2.matrix)
@@ -362,6 +356,10 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		}
   	}
 
+  	private def permutateMatrix(matrix: Matrix, f1: (Row) => Boolean, f2: (T) => Boolean): Matrix = {
+  		return matrix.filter(f1).flatten.filter(f2).permutations.to[List]
+  	}
+
   	private def flatten(list: List[_]): List[_] = {
   		list flatMap {
           	case list1: List[_] => flatten(list1)
@@ -401,7 +399,7 @@ abstract class Shape[T <: Shape[T]] {
 	def *(value: Int): T
 	def +(shape2: T): T
  	def -(shape2: T): T
- 	def filter(shapes: Vector[T]) (f: (T) => Boolean): Vector[T]
+ 	def filter(shapes: List[T]) (f: (T) => Boolean): List[T]
 }
 
 class Rectangle (
@@ -422,10 +420,10 @@ class Rectangle (
 	override def sum: Int = {
 		return (this.lBottom + this.lTop + this.rTop + this.rBottom)
 	}
-	override def filter(rectangles: Vector[Rectangle]) (f: (Rectangle) => Boolean): Vector[Rectangle] = (
+	override def filter(rectangles: List[Rectangle]) (f: (Rectangle) => Boolean): List[Rectangle] = (
 		for (rectangle <- rectangles; if f(rectangle))
 			yield rectangle
-	).to[Vector]
+	).to[List]
 
 	private def multiply(rectangle2: Rectangle): Unit = {
 		this.leftBottom *= rectangle2.lBottom
@@ -496,6 +494,5 @@ class Rectangle (
 
 object Rectangle {
 	def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
-
 	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = new Rectangle(leftBottom, leftTop, rightTop, rightBottom)
 }
