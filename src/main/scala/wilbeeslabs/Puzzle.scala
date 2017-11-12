@@ -2,10 +2,18 @@ package com.wildbeeslabs
 
 object Puzzle extends AppInitializer {
 	/* Default usage mapping */
-	val usage = """
+	val usage =
+	"""
+	>>> Program Information <<<
+
 		Usage: puzzle --file filename
+
+	>>> Copyright ©<<<
 	"""
 	def main(args: Array[String]): Unit = {
+		println(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)).filter(_ != null).permutations.toList)
+		println(permutate[Rectangle](List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4))))
+
     	if (args.length == 0) {
 	        println(usage)
 	        return//sys.exit(0)
@@ -43,7 +51,7 @@ trait AppInitializer {
 					(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
 		)
 		var rectList = list.map(elem => new Rectangle(elem(2), elem(0), elem(1), elem(3)))
-		val matrixDim = getDimension(rectList.length)
+		val matrixDim = getMaxPowerOf2(rectList.length)
 		var rectMatrix = CMatrix[Rectangle](matrixDim, matrixDim)
 		// var data = (
 		// 	for(i <- 1 to matrixDim) yield
@@ -114,7 +122,7 @@ trait AppInitializer {
   		}
 	}
 
-    def getDimension(n: Int): Int = {
+    def getMaxPowerOf2(n: Int): Int = {
     	var p: Int = 0;
     	var m = n
     	while(m > 0) {
@@ -123,6 +131,17 @@ trait AppInitializer {
     	}
     	return p
     }
+
+    def permutate[A] (list: List[A]): List[List[A]] = {
+	    list match {
+		   case List(elem) => List(List(elem))
+		   case l =>
+		    for {
+		       i <- List.range(0, l.length)
+		       p <- permutate(l.slice(0, i) ++ l.slice(i + 1, l.length))
+		    } yield l(i) :: p
+		}
+	}
 }
 
 class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
@@ -147,15 +166,14 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
  	def minor(i: Int, j: Int): Unit = minorMatrix(matrix, i, j)
  	def beside(matrix2: CMatrix[T]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
   	def above(matrix2: CMatrix[T]): Unit = this.matrix ::: matrix2.matrix
+  	def sortRows(f: (Row) => Boolean, s: (Row, Row) => Boolean): Matrix = filterAndSortBy[Row](this.matrix, f, s)
  	def *(matrix2: CMatrix[T]): Unit = multiplyMatrices(this.matrix, matrix2.matrix)
  	def *(value: Int): Unit = multiply(this.matrix, value)
  	def +(matrix2: CMatrix[T]): Unit = add(this.matrix, matrix2.matrix)
  	def -(matrix2: CMatrix[T]): Unit = substract(this.matrix, matrix2.matrix)
  	def update(matrix2: Matrix): Unit = this.matrix = matrix2
- 	def fill(value: T): Unit = matrix match {
-		case matrix: Matrix => {
-			this.foreach((t: T) => { value })
-		}
+ 	def fill(value: T): Unit = {
+		this.foreach((t: T) => { value })
   	}
 	def fill(list: List[T]): Unit = {
 		def padList(buffer: ListBuffer[T], delta: Int, value: T): Unit = {
@@ -165,44 +183,39 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 				c += 1
 			}
 		}
-		matrix match {
-			case matrix: Matrix => {
-				var result = new ListBuffer[T]()
-				if (this.size > list.length) {
-					var delta = (this.size - list.length) / 2
-					padList(result, delta / 2, null)
-					var (left, right) = list.splitAt(colCount - delta)
-					left.map(result += _)
-					padList(result, (delta - delta / 2), null)
-					var last = (right.length % colCount)
-					var (left_, right_) = right.splitAt(right.length - last)
-					left_.map(result += _)
-					padList(result, (this.size - list.length - delta) / 2, null)
-					right_.map(result += _)
-					padList(result, (this.size - list.length - delta) / 2, null)
-				} else {
-					list.take(this.size).map(result += _)
-				}
-				result.to[List].zipWithIndex.foreach {
-					case (elem, i) => this.insert(i, elem)
-				}
-			}
-	  	}
+		var result = new ListBuffer[T]()
+		if (this.size > list.length) {
+			var delta = (this.size - list.length) / 2
+			padList(result, delta / 2, null)
+			var (left, right) = list.splitAt(colCount - delta)
+			left.map(result += _)
+			padList(result, (delta - delta / 2), null)
+			var last = (right.length % colCount)
+			var (left_, right_) = right.splitAt(right.length - last)
+			left_.map(result += _)
+			padList(result, (this.size - list.length - delta) / 2, null)
+			right_.map(result += _)
+			padList(result, (this.size - list.length - delta) / 2, null)
+		} else {
+			list.take(this.size).map(result += _)
+		}
+		result.to[List].zipWithIndex.foreach {
+			case (elem, i) => this.insert(i, elem)
+		}
 	}
   	def foreach(f: (T) => T): Unit = {
   		this.matrix = (for(row <- this.matrix) yield
  			(for(elem <- row) yield f(elem)).to[List]
  		).to[List]
   	}
-	def sum(): Int = matrix match {
-		case matrix: Matrix =>
-			var res = 0
-		    for(row <- matrix)
-		    	for(elem <- row)
-		    		if(null != elem) {
-		    			res += elem.sum
-		    		}
-		    return res
+	def sum(): Int = {
+		var res = 0
+		for(row <- matrix)
+		   	for(elem <- row)
+		   		if(null != elem) {
+		   			res += elem.sum
+		   		}
+		return res
 	}
 	def update(i: Int, j: Int, value: T): Unit = {
 		ensure((m: Unit) => rowCount(matrix) >= i && colCount(matrix) >= j, {
@@ -226,25 +239,36 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 			}
 			return false
 		}
-		matrix match {
-			case matrix: Matrix => {
-				this.matrix.zipWithIndex.foreach {
-					case(elem, i) => {
-						var count = 0
-						elem.zipWithIndex.foreach {
-							case(elem2, j) => {
-								//if (null != elem2) {
-									if(isValid(i, j, i+1, j+1)) {
-										println(elem2)
-									}
-								//}
+		this.matrix.zipWithIndex.foreach {
+			case(elem, i) => {
+				var count = 0
+				elem.zipWithIndex.foreach {
+					case(elem2, j) => {
+						//if (null != elem2) {
+							if(isValid(i, j, i+1, j+1)) {
+								println(elem2)
 							}
-						}
+						//}
 					}
 				}
-				return 1
-			} 
+			}
 		}
+		return 1
+	}
+
+	private def permutate[A] (list: List[A]): List[List[A]] = {
+	    list match {
+		   case List(elem) => List(List(elem))
+		   case l =>
+		    for {
+		       i <- List.range(0, l.length)
+		       p <- permutate(l.slice(0, i) ++ l.slice(i + 1, l.length))
+		    } yield l(i) :: p
+		}
+	}
+
+	private def filterAndSortBy[A] (list: List[A], fFilter: (A) => Boolean, fSort: (A, A) => Boolean): List[A] = {
+		list.filter(fFilter(_)).sortWith(fSort(_, _))
 	}
 
 	// private methods
