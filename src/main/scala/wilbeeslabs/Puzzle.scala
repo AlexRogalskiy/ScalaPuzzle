@@ -71,18 +71,18 @@ trait AppInitializer {
 		cc4.map(elem => {
 			elem.permutations.foreach {
 				case(r) => {
-					if((r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 &&
-					(r(0).lBottom + r(2).lTop) <= 10 &&
+					if((r(0).rBottom + r(1).lBottom + r(2).lTop + r(3).rTop) == 10 &&
+					(r(0).lBottom + r(3).lTop) <= 10 &&
 					(r(0).rTop + r(1).lTop) <= 10 &&
-					(r(1).rBottom + r(3).rTop) <= 10 &&
-					(r(2).rBottom + r(3).lBottom) <= 10) {
-						result += new RectangleMask[Rectangle[Int]](r(0), r(1), r(2), r(3))
+					(r(1).rBottom + r(2).rTop) <= 10 &&
+					(r(2).lBottom + r(3).rBottom) <= 10) {
+						result += new RectangleMask[Rectangle[Int]](r(3), r(0), r(1), r(2))
 					}
 				}
 			}
 		})
 		//var dups = result.toList.groupBy(identity).collect { case (x, List(_,_,_*)) => x }
-		//println(result)
+		//println(result(0))
 		//println(dups.toList.length)
 		var buffLeft = new ListBuffer[RectangleMask[Rectangle[Int]]]()
 		var buffRight = new ListBuffer[RectangleMask[Rectangle[Int]]]()
@@ -101,10 +101,10 @@ trait AppInitializer {
 		var rectMask = result.map(elem => {
 			clearBuffers()
 			result.map(elem2 => {
-				if(elem.left == elem2.right && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
-				else if(elem.right == elem2.left && elem2.intersectRight(elem).isEmpty) buffRight += elem2
-				else if(elem.top == elem2.bottom && elem2.intersectTop(elem).isEmpty) buffTop += elem2
-				else if(elem.bottom == elem2.top && elem2.intersectBottom(elem).isEmpty) buffBottom += elem2
+				if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
+				else if(elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) buffRight += elem2
+				else if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) buffTop += elem2
+				else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) buffBottom += elem2
 			})
 			if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
 				buffLeft.map(elemLeft => {
@@ -602,7 +602,7 @@ class Rectangle[T >: Int <: Int] (
 	//     if (lBottom != 0) lBottom
 	//     else this.leftTop compareTo rectangle.leftTop
  	// }
-	override def toString = s"{ ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
+	override def toString = s"Rectangle => { ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 }
 
 object Rectangle {
@@ -631,30 +631,39 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 	def rTop: T = rightTop
 	def rBottom: T = rightBottom
 
-	def center: Set[String] = Set(leftTop.ID, rightTop.ID, rightBottom.ID, leftBottom.ID)
-	def left: Set[String] = Set(leftBottom.ID, leftTop.ID)
-	def top: Set[String] = Set(leftTop.ID, rightTop.ID)
-	def right: Set[String] = Set(rightBottom.ID, rightTop.ID)
-	def bottom: Set[String] = Set(leftBottom.ID, rightBottom.ID)
+	def border: Tuple4[String, String, String, String] = Tuple4(leftTop.ID, rightTop.ID, rightBottom.ID, leftBottom.ID)
+	def leftBorder: Tuple2[String, String] = Tuple2(leftBottom.ID, leftTop.ID)
+	def topBorder: Tuple2[String, String] = Tuple2(leftTop.ID, rightTop.ID)
+	def rightBorder: Tuple2[String, String] = Tuple2(rightBottom.ID, rightTop.ID)
+	def bottomBorder: Tuple2[String, String] = Tuple2(leftBottom.ID, rightBottom.ID)
+
+	val borderSet: Set[String] = tuple4ToSet(this.border)
+	val leftBorderSet: Set[String] = tuple2ToSet(this.leftBorder)
+	val topBorderSet: Set[String] = tuple2ToSet(this.topBorder)
+	val rightBorderSet: Set[String] = tuple2ToSet(this.rightBorder)
+	val bottomBorderSet: Set[String] = tuple2ToSet(this.bottomBorder)
 
 	def diff(elem: RectangleMask[T]): Set[String] = {
-		return this.center.diff(elem.center)
+		return this.borderSet.diff(elem.borderSet)
 	}
 	def intersect(elem: RectangleMask[T]): Set[String] = {
-		return this.center.intersect(elem.center)
+		return this.borderSet.intersect(elem.borderSet)
 	}
 	def intersectLeft(elem: RectangleMask[T]): Set[String] = {
-		return this.left.intersect(elem.center)
+		return this.leftBorderSet.intersect(elem.borderSet)
 	}
 	def intersectRight(elem: RectangleMask[T]): Set[String] = {
-		return this.right.intersect(elem.center)
+		return this.rightBorderSet.intersect(elem.borderSet)
 	}
 	def intersectTop(elem: RectangleMask[T]): Set[String] = {
-		return this.top.intersect(elem.center)
+		return this.topBorderSet.intersect(elem.borderSet)
 	}
 	def intersectBottom(elem: RectangleMask[T]): Set[String] = {
-		return this.bottom.intersect(elem.center)
+		return this.bottomBorderSet.intersect(elem.borderSet)
 	}
 
-	override def toString = s"\n{ RectangleMask: ($center), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
+	private def tuple2ToSet[T] (t: (T, T)): Set[T] = Set(t._1, t._2)
+	private def tuple4ToSet[T] (t: (T, T, T, T)): Set[T] = Set(t._1, t._2, t._3, t._4)
+
+	override def toString = s"\n{ RectangleMask => leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 }
