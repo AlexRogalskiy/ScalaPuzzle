@@ -107,7 +107,7 @@ trait AppInitializer {
 		import scala.collection.mutable.ListBuffer
 		var result = new ListBuffer[List[Rectangle[Int]]]()
 		var cc4 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r))
-		cc4.map((elem) => {
+		cc4.map(elem => {
 			elem.permutations.foreach {
 				case(r) => {
 					if((r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 &&
@@ -121,9 +121,12 @@ trait AppInitializer {
 			}
 		})
 		//var dups = result.toList.groupBy(identity).collect { case (x, List(_,_,_*)) => x }
-		println(result)
+		//println(result)
 		//println(dups.toList.length)
-
+		var rectMask = result.map(elem => {
+			new RectangleMask(elem(0), elem(1), elem(2), elem(3))
+		})
+		println(rectMask)
 		// import java.io._
 		// var file = "result1.txt"
 		// var writer = new BufferedWriter(new FileWriter(file))
