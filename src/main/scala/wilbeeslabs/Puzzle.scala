@@ -18,6 +18,10 @@ object Puzzle extends AppInitializer {
 		//val lol = List(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)), List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)))
 		//println(lol.flatten.filter(null != _).permutations.toList)
 		//println(lol.flatten.filter(null != _).combinations(2).toList)
+		
+		//var ls = List(1, 2, 3, 4, 5)
+		//var l = ls.combinations(4).map((elem) => println(elem.permutations.length))
+		//println(l.length)
 
     	if (args.length == 0) {
 	        println(usage)
@@ -74,12 +78,49 @@ trait AppInitializer {
 		//println(cc.length)
 
 		var cc = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
-			(r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 && (r(0).lBottom + r(2).lTop) <= 10 &&
+			(r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 &&
+			(r(0).lBottom + r(2).lTop) <= 10 &&
 			(r(0).rTop + r(1).lTop) <= 10 &&
 			(r(1).rBottom + r(3).rTop) <= 10 &&
 			(r(2).rBottom + r(3).lBottom) <= 10
 		})
-		println(cc.mkString("\n"))
+		//println(cc.mkString("\n"))
+		//println(cc.length)
+		var cc2 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
+			(r(0).rBottom + r(1).lBottom + r(2).lTop + r(3).rTop) == 10 &&
+			(r(0).lBottom + r(3).lTop) <= 10 &&
+			(r(0).rTop + r(1).lTop) <= 10 &&
+			(r(1).rBottom + r(2).rTop) <= 10 &&
+			(r(3).rBottom + r(2).lBottom) <= 10
+		})
+		//println(cc2.length)
+
+		var cc3 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
+			(r(3).rBottom + r(2).lBottom + r(1).lTop + r(0).rTop) == 10 &&
+			(r(3).lBottom + r(0).lTop) <= 10 &&
+			(r(0).rBottom + r(1).lBottom) <= 10 &&
+			(r(1).rTop + r(2).rBottom) <= 10 &&
+			(r(2).lTop + r(3).rTop) <= 10
+		})
+		//println(cc3.length)
+		import scala.collection.mutable.ListBuffer
+		var result = new ListBuffer[List[Rectangle[Int]]]()
+
+		var cc4 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r))
+		//println(cc4.length)
+		cc4.map((elem) =>
+			elem.permutations.foreach {
+				case(r) => {
+					if((r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 &&
+					(r(0).lBottom + r(2).lTop) <= 10 &&
+					(r(0).rTop + r(1).lTop) <= 10 &&
+					(r(1).rBottom + r(3).rTop) <= 10 &&
+					(r(2).rBottom + r(3).lBottom) <= 10) {
+						result += elem
+					}
+				}
+			})
+		println(result.length)
 
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
