@@ -8,7 +8,7 @@ object Puzzle extends AppInitializer {
 
 		Usage: puzzle --file filename
 
-	>>> Copyright ©<<<
+	>>> Copyright (C)<<<
 	"""
 	def main(args: Array[String]): Unit = {
 		//println(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)).filter(_ != null).permutations.toList)
@@ -61,6 +61,7 @@ trait AppInitializer {
 		var rectList = list.map(elem => new Rectangle[Int](elem(2), elem(0), elem(1), elem(3)))
 		val matrixDim = getMaxPowerOf2(rectList.length)
 		var rectMatrix = CMatrix[Rectangle[Int]](matrixDim, matrixDim)
+		rectMatrix.fill(rectList)
 		// var data = (
 		// 	for(i <- 1 to matrixDim) yield
 	 // 			(for(j <- 1 to matrixDim) yield new Rectangle(1, 2, 3, 4)).toList
@@ -69,7 +70,6 @@ trait AppInitializer {
 		// 	for(i <- 1 to 13) yield new Rectangle(1, 2, 3, 4)
 		// ).toList
 
-		rectMatrix.fill(rectList)
 		// rectMatrix.runTask((r1, r2) => { 
 		// 	(r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10)
 		// })
@@ -103,12 +103,11 @@ trait AppInitializer {
 			(r(2).lTop + r(3).rTop) <= 10
 		})
 		//println(cc3.length)
+
 		import scala.collection.mutable.ListBuffer
 		var result = new ListBuffer[List[Rectangle[Int]]]()
-
 		var cc4 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r))
-		//println(cc4.length)
-		cc4.map((elem) =>
+		cc4.map((elem) => {
 			elem.permutations.foreach {
 				case(r) => {
 					if((r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 &&
@@ -116,11 +115,34 @@ trait AppInitializer {
 					(r(0).rTop + r(1).lTop) <= 10 &&
 					(r(1).rBottom + r(3).rTop) <= 10 &&
 					(r(2).rBottom + r(3).lBottom) <= 10) {
-						result += elem
+						result += r
 					}
 				}
-			})
-		println(result.length)
+			}
+		})
+		//var dups = result.toList.groupBy(identity).collect { case (x, List(_,_,_*)) => x }
+		println(result)
+		//println(dups.toList.length)
+
+		// import java.io._
+		// var file = "result1.txt"
+		// var writer = new BufferedWriter(new FileWriter(file))
+		// result1.map(_.toString).foreach(writer.write)
+		// writer.close()
+
+		// file = "result.txt"
+		// writer = new BufferedWriter(new FileWriter(file))
+		// result.map(_.toString).foreach(writer.write)
+		// writer.close()
+
+		// file = "dups.txt"
+		// writer = new BufferedWriter(new FileWriter(file))
+		// dups.map(_.toString).foreach(writer.write)
+		// writer.close()
+
+		//var list_ = List(1, 2, 3, 4)
+		//var dups = list_.groupBy(identity).collect { case (x, List(_,_,_*)) => x }
+		//println(list_.permutations.toList)
 
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
@@ -479,11 +501,14 @@ class Rectangle[T >: Int <: Int] (
 	private var rightTop: T,
 	private var rightBottom: T) extends Shape[Rectangle[T]] { //extends Comparable[Rectangle];
 
+	private val uuid: String = java.util.UUID.randomUUID.toString
+
 	def this() = this(0, 0, 0, 0)
 	def lBottom: T = leftBottom
 	def lTop: T = leftTop
 	def rTop: T = rightTop
 	def rBottom: T = rightBottom
+	def ID: String = uuid
  	override def *(rectangle2: Rectangle[T]) = multiply(this, rectangle2)
  	override def *(value: Int) = multiply(this, value)
  	override def +(rectangle2: Rectangle[T]) = add(this, rectangle2)
@@ -560,10 +585,39 @@ class Rectangle[T >: Int <: Int] (
 	//     if (lBottom != 0) lBottom
 	//     else this.leftTop compareTo rectangle.leftTop
  	// }
-	override def toString = s"{leftBottom: ($lBottom), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom)}"
+	override def toString = s"{ID: ($ID), leftBottom: ($lBottom), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom)}"
 }
 
 object Rectangle {
 	def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
+}
+
+abstract class ShapeMask[T <: ShapeMask[T]] {
+	// def sum(): Int
+	// def *(shape2: T): T
+	// def *(value: Int): T
+	// def +(shape2: T): T
+ // 	def -(shape2: T): T
+ // 	def filter(shapes: List[T]) (f: (T) => Boolean): List[T]
+}
+
+class RectangleMask[T >: Null <: Rectangle[Int]] (
+	private var leftBottom: T,
+	private var leftTop: T,
+	private var rightTop: T,
+	private var rightBottom: T) extends ShapeMask[RectangleMask[T]] {
+
+	def this() = this(null, null, null, null)
+	def lBottom: T = leftBottom
+	def lTop: T = leftTop
+	def rTop: T = rightTop
+	def rBottom: T = rightBottom
+
+	def left: List[String] = List(leftBottom.ID, leftTop.ID)
+	def top: List[String] = List(leftTop.ID, rightTop.ID)
+	def right: List[String] = List(rightBottom.ID, rightTop.ID)
+	def bottom: List[String] = List(leftBottom.ID, rightBottom.ID)
+
+	override def toString = s"{leftBottom: ($lBottom), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom)}"
 }
