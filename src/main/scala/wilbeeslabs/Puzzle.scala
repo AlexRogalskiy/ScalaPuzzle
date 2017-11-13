@@ -8,21 +8,9 @@ object Puzzle extends AppInitializer {
 
 		Usage: puzzle --file filename
 
-	>>> Copyright (C)<<<
+	>>> Copyright by wildbeeslabs (C) <<<
 	"""
 	def main(args: Array[String]): Unit = {
-		//println(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)).filter(_ != null).permutations.toList)
-		//println(permutate[Rectangle](List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4))))
-
-		//var lol = List(List(1), List(2), 3);
-		//val lol = List(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)), List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)))
-		//println(lol.flatten.filter(null != _).permutations.toList)
-		//println(lol.flatten.filter(null != _).combinations(2).toList)
-		
-		//var ls = List(1, 2, 3, 4, 5)
-		//var l = ls.combinations(4).map((elem) => println(elem.permutations.length))
-		//println(l.length)
-
     	if (args.length == 0) {
 	        println(usage)
 	        return//sys.exit(0)
@@ -53,7 +41,7 @@ trait AppInitializer {
 		// val triangle = new Array[Array[Int]](12)
 		// for (i <- triangle.indices)
 		// 	triangle(i) = new Array[Int](i + 1)
-		var list = loadDataFromFile[List[Int]](
+		var list = loadDataFromFile[List[Int]] (
 					map.getOrElse('file, "default.txt").toString,
 					(str: String) => { str.trim.matches("\\d{1}\\s+\\d\\s+\\d\\s+\\d") },
 					(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
@@ -77,35 +65,8 @@ trait AppInitializer {
 		//var cc = rectMatrix.permutate((r: List[Rectangle]) => true, (r: Rectangle) => null != r)
 		//println(cc.length)
 
-		var cc = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
-			(r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 &&
-			(r(0).lBottom + r(2).lTop) <= 10 &&
-			(r(0).rTop + r(1).lTop) <= 10 &&
-			(r(1).rBottom + r(3).rTop) <= 10 &&
-			(r(2).rBottom + r(3).lBottom) <= 10
-		})
-		//println(cc.mkString("\n"))
-		//println(cc.length)
-		var cc2 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
-			(r(0).rBottom + r(1).lBottom + r(2).lTop + r(3).rTop) == 10 &&
-			(r(0).lBottom + r(3).lTop) <= 10 &&
-			(r(0).rTop + r(1).lTop) <= 10 &&
-			(r(1).rBottom + r(2).rTop) <= 10 &&
-			(r(3).rBottom + r(2).lBottom) <= 10
-		})
-		//println(cc2.length)
-
-		var cc3 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
-			(r(3).rBottom + r(2).lBottom + r(1).lTop + r(0).rTop) == 10 &&
-			(r(3).lBottom + r(0).lTop) <= 10 &&
-			(r(0).rBottom + r(1).lBottom) <= 10 &&
-			(r(1).rTop + r(2).rBottom) <= 10 &&
-			(r(2).lTop + r(3).rTop) <= 10
-		})
-		//println(cc3.length)
-
 		import scala.collection.mutable.ListBuffer
-		var result = new ListBuffer[List[Rectangle[Int]]]()
+		var result = new ListBuffer[RectangleMask[Rectangle[Int]]]()
 		var cc4 = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r))
 		cc4.map(elem => {
 			elem.permutations.foreach {
@@ -115,7 +76,7 @@ trait AppInitializer {
 					(r(0).rTop + r(1).lTop) <= 10 &&
 					(r(1).rBottom + r(3).rTop) <= 10 &&
 					(r(2).rBottom + r(3).lBottom) <= 10) {
-						result += r
+						result += new RectangleMask[Rectangle[Int]](r(0), r(1), r(2), r(3))
 					}
 				}
 			}
@@ -123,10 +84,62 @@ trait AppInitializer {
 		//var dups = result.toList.groupBy(identity).collect { case (x, List(_,_,_*)) => x }
 		//println(result)
 		//println(dups.toList.length)
+		var buffLeft = new ListBuffer[RectangleMask[Rectangle[Int]]]()
+		var buffRight = new ListBuffer[RectangleMask[Rectangle[Int]]]()
+		var buffTop = new ListBuffer[RectangleMask[Rectangle[Int]]]()
+		var buffBottom = new ListBuffer[RectangleMask[Rectangle[Int]]]()
+		def clearBuffers(): Unit = {
+			buffLeft.clear()
+			buffRight.clear()
+			buffTop.clear()
+			buffBottom.clear()
+		}
+		def isNotEmpty(buffer: ListBuffer[RectangleMask[Rectangle[Int]]]): Boolean = {
+			return !buffer.isEmpty
+		}
+		var count = 0
 		var rectMask = result.map(elem => {
-			new RectangleMask(elem(0), elem(1), elem(2), elem(3))
+			clearBuffers()
+			result.map(elem2 => {
+				if(elem.left == elem2.right && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
+				else if(elem.right == elem2.left && elem2.intersectRight(elem).isEmpty) buffRight += elem2
+				else if(elem.top == elem2.bottom && elem2.intersectTop(elem).isEmpty) buffTop += elem2
+				else if(elem.bottom == elem2.top && elem2.intersectBottom(elem).isEmpty) buffBottom += elem2
+			})
+			if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
+				buffLeft.map(elemLeft => {
+					buffRight.map(elemRight => {
+						if(elemLeft.intersect(elemRight).isEmpty) {
+							buffTop.map(elemTop => {
+								buffBottom.map(elemBottom => {
+									if(elemTop.intersect(elemBottom).isEmpty &&
+										elemLeft.intersectLeft(elemTop).isEmpty &&
+										elemTop.intersectTop(elemRight).isEmpty &&
+										elemRight.intersectRight(elemBottom).isEmpty &&
+										elemBottom.intersectBottom(elemLeft).isEmpty) {
+										count += 1
+										println("\n-------------")
+										println("Center: " + elem)
+										println("Left: " + elemLeft)
+										println("Right: " + elemRight)
+										println("Top: " + elemTop)
+										println("Bottom: " + elemBottom)
+										println("\n-------------")
+									}
+								})
+							})
+						}
+					})
+				})
+			}
 		})
-		println(rectMask)
+		println(count)
+		//println(buffLeft.length)
+		//var rectMask2 = result.combinations(5).toList
+		//println(rectMask2.length)
+		//var rm = List(1, 2, 3, 4, 5, 6)
+		//println(rm.combinations(5).length)
+
 		// import java.io._
 		// var file = "result1.txt"
 		// var writer = new BufferedWriter(new FileWriter(file))
@@ -180,7 +193,7 @@ trait AppInitializer {
 		if (!file.exists() || !file.isFile()) {
 			return Nil
 		}
-    	return Source.fromFile(file)(decoder).getLines.to[List]
+    	return Source.fromFile(file)(decoder).getLines.to[List].filter(_.trim != "")
     }
 
 	def loadDataFromFile[A] (fileName: String, predicat: (String) => Boolean, process: (String) => A): List[A] = {
@@ -204,6 +217,10 @@ trait AppInitializer {
     		case ex: Exception => None
   		}
 	}
+
+	def duplicates[A] (list: Iterable[A]): Iterable[A] = {
+    	return list.groupBy(identity).collect { case (x, List(_,_,_*)) => x }
+    }
 
     def getMaxPowerOf2(n: Int): Int = {
     	var p: Int = 0;
@@ -467,9 +484,6 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
     	var (temp1, temp2) = (this.matrix(i1)(j1), this.matrix(i2)(j2))
     	this.update(i1, j1, temp2)
     	this.update(i2, j2, temp1)
-    	//var (row1, row2) = (this.matrix(i1).updated(j1, temp2), this.matrix(i2).updated(j2, temp1))
-		//this.matrix = this.matrix.updated(i1, row1)
-		//this.matrix = this.matrix.updated(i2, row2)
 	}
 
     private def swapByValue[T] (elem1: T, elem2: T, list: List[T]): List[T] = {
@@ -588,7 +602,7 @@ class Rectangle[T >: Int <: Int] (
 	//     if (lBottom != 0) lBottom
 	//     else this.leftTop compareTo rectangle.leftTop
  	// }
-	override def toString = s"{ID: ($ID), leftBottom: ($lBottom), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom)}"
+	override def toString = s"{ ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 }
 
 object Rectangle {
@@ -617,10 +631,30 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 	def rTop: T = rightTop
 	def rBottom: T = rightBottom
 
-	def left: List[String] = List(leftBottom.ID, leftTop.ID)
-	def top: List[String] = List(leftTop.ID, rightTop.ID)
-	def right: List[String] = List(rightBottom.ID, rightTop.ID)
-	def bottom: List[String] = List(leftBottom.ID, rightBottom.ID)
+	def center: Set[String] = Set(leftTop.ID, rightTop.ID, rightBottom.ID, leftBottom.ID)
+	def left: Set[String] = Set(leftBottom.ID, leftTop.ID)
+	def top: Set[String] = Set(leftTop.ID, rightTop.ID)
+	def right: Set[String] = Set(rightBottom.ID, rightTop.ID)
+	def bottom: Set[String] = Set(leftBottom.ID, rightBottom.ID)
 
-	override def toString = s"{leftBottom: ($lBottom), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom)}"
+	def diff(elem: RectangleMask[T]): Set[String] = {
+		return this.center.diff(elem.center)
+	}
+	def intersect(elem: RectangleMask[T]): Set[String] = {
+		return this.center.intersect(elem.center)
+	}
+	def intersectLeft(elem: RectangleMask[T]): Set[String] = {
+		return this.left.intersect(elem.center)
+	}
+	def intersectRight(elem: RectangleMask[T]): Set[String] = {
+		return this.right.intersect(elem.center)
+	}
+	def intersectTop(elem: RectangleMask[T]): Set[String] = {
+		return this.top.intersect(elem.center)
+	}
+	def intersectBottom(elem: RectangleMask[T]): Set[String] = {
+		return this.bottom.intersect(elem.center)
+	}
+
+	override def toString = s"\n{ RectangleMask: ($center), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 }
