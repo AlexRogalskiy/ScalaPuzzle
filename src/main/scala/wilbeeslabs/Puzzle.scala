@@ -14,8 +14,11 @@ object Puzzle extends AppInitializer {
 		//println(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)).filter(_ != null).permutations.toList)
 		//println(permutate[Rectangle](List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4))))
 
+		//var lol = List(List(1), List(2), 3);
 		//val lol = List(List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)), List(new Rectangle(1, 2, 3, 4), new Rectangle(1, 2, 3, 4)))
 		//println(lol.flatten.filter(null != _).permutations.toList)
+		//println(lol.flatten.filter(null != _).combinations(2).toList)
+
     	if (args.length == 0) {
 	        println(usage)
 	        return//sys.exit(0)
@@ -66,8 +69,18 @@ trait AppInitializer {
 		// rectMatrix.runTask((r1, r2) => { 
 		// 	(r1.rTop + r2.lTop <= 10 && r1.rBottom + r2.lBottom <= 10)
 		// })
-		var cc = rectMatrix.permutate((r: List[Rectangle]) => true, (r: Rectangle) => null != r)
-		println(cc.length)
+
+		//var cc = rectMatrix.permutate((r: List[Rectangle]) => true, (r: Rectangle) => null != r)
+		//println(cc.length)
+
+		var cc = rectMatrix.combinate(4, (r: List[Rectangle]) => true, (r: Rectangle) => (null != r), (r: List[Rectangle]) => { 
+			(r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 && (r(0).lBottom + r(2).lTop) <= 10 &&
+			(r(0).rTop + r(1).lTop) <= 10 &&
+			(r(1).rBottom + r(3).rTop) <= 10 &&
+			(r(2).rBottom + r(3).lBottom) <= 10
+		})
+		//println(cc.mkString("\n"))
+
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
 		// 		new Rectangle(1, 2, 3, 4)
@@ -159,8 +172,13 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
  	def minor(i: Int, j: Int): Unit = minorMatrix(matrix, i, j)
  	def beside(matrix2: CMatrix[T]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
   	def above(matrix2: CMatrix[T]): Unit = this.matrix ::: matrix2.matrix
-  	def sortRows(filter: (Row) => Boolean = (Row) => true, sort: (Row, Row) => Boolean): Matrix = filterAndSortBy[Row](this.matrix, filter, sort)
-  	def permutate(filter1: (Row) => Boolean = (Row) => true, filter2: (T) => Boolean = (T) => true): Matrix = permutateMatrix(this.matrix, filter1, filter2)
+  	
+  	def filterRows(filter: (Row) => Boolean): Matrix = filterBy[Row](this.matrix, filter)
+  	def sortRows(sort: (Row, Row) => Boolean): Matrix = sortBy[Row](this.matrix, sort)
+  	
+  	def permutate(rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = permutateMatrix(this.matrix, rowFilter, elemPreFilter, elemPostFilter)
+  	def combinate(size: Int, rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = combinateMatrix(this.matrix, size, rowFilter, elemPreFilter, elemPostFilter)
+ 	
  	def *(matrix2: CMatrix[T]): Unit = multiplyMatrices(this.matrix, matrix2.matrix)
  	def *(value: Int): Unit = multiply(this.matrix, value)
  	def +(matrix2: CMatrix[T]): Unit = add(this.matrix, matrix2.matrix)
@@ -250,6 +268,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		return 1
 	}
 
+	// private methods
 	private def permutate[A] (list: List[A]): List[List[A]] = {
 	    list match {
 		   case List(elem) => List(List(elem))
@@ -261,11 +280,14 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		}
 	}
 
-	private def filterAndSortBy[A] (list: List[A], fFilter: (A) => Boolean, fSort: (A, A) => Boolean): List[A] = {
-		list.filter(fFilter(_)).sortWith(fSort(_, _))
+	private def filterBy[A] (list: List[A], f: (A) => Boolean): List[A] = {
+		return list.filter(f(_))
 	}
 
-	// private methods
+	private def sortBy[A] (list: List[A], s: (A, A) => Boolean): List[A] = {
+		return list.sortWith(s(_, _))
+	}
+
 	private def init(numRows: Int, numCols: Int) (f: (Int, Int) => T): Matrix = (
  		for(i <- 1 to numRows) yield
  			(for(j <- 1 to numCols) yield f(i, j)).to[List]
@@ -356,8 +378,16 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		}
   	}
 
-  	private def permutateMatrix(matrix: Matrix, f1: (Row) => Boolean, f2: (T) => Boolean): Matrix = {
-  		return matrix.filter(f1).flatten.filter(f2).permutations.to[List]
+  	private def permutateMatrix(matrix: Matrix, f1: (Row) => Boolean, f2: (T) => Boolean, f3: (Row) => Boolean): Matrix = {
+  		return matrix.filter(f1).flatten.filter(f2).permutations.filter(f3).to[List]
+  	}
+
+  	private def combinateMatrix(matrix: Matrix, size: Int, f1: (Row) => Boolean, f2: (T) => Boolean, f3: (Row) => Boolean): Matrix = {
+  		return matrix.filter(f1).flatten.filter(f2).combinations(size).filter(f3).to[List]
+  	}
+
+  	private def getDuplicates[A] (list: List[A], f1: (A) => Boolean): Iterable[A] = {
+  		return list.filter(f1).groupBy(identity(_)).collect { case (x, List(_,_,_*)) => x }
   	}
 
   	private def flatten(list: List[_]): List[_] = {
