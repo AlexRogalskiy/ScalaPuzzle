@@ -54,9 +54,9 @@ trait AppInitializer {
 					(str: String) => { str.trim.matches("\\d{1}\\s+\\d\\s+\\d\\s+\\d") },
 					(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
 		)
-		var rectList = list.map(elem => new Rectangle(elem(2), elem(0), elem(1), elem(3)))
+		var rectList = list.map(elem => new Rectangle[Int](elem(2), elem(0), elem(1), elem(3)))
 		val matrixDim = getMaxPowerOf2(rectList.length)
-		var rectMatrix = CMatrix[Rectangle](matrixDim, matrixDim)
+		var rectMatrix = CMatrix[Rectangle[Int]](matrixDim, matrixDim)
 		// var data = (
 		// 	for(i <- 1 to matrixDim) yield
 	 // 			(for(j <- 1 to matrixDim) yield new Rectangle(1, 2, 3, 4)).toList
@@ -73,13 +73,13 @@ trait AppInitializer {
 		//var cc = rectMatrix.permutate((r: List[Rectangle]) => true, (r: Rectangle) => null != r)
 		//println(cc.length)
 
-		var cc = rectMatrix.combinate(4, (r: List[Rectangle]) => true, (r: Rectangle) => (null != r), (r: List[Rectangle]) => { 
+		var cc = rectMatrix.combinate(4, (r: List[Rectangle[Int]]) => true, (r: Rectangle[Int]) => (null != r), (r: List[Rectangle[Int]]) => { 
 			(r(0).rBottom + r(1).lBottom + r(2).rTop + r(3).lTop) == 10 && (r(0).lBottom + r(2).lTop) <= 10 &&
 			(r(0).rTop + r(1).lTop) <= 10 &&
 			(r(1).rBottom + r(3).rTop) <= 10 &&
 			(r(2).rBottom + r(3).lBottom) <= 10
 		})
-		//println(cc.mkString("\n"))
+		println(cc.mkString("\n"))
 
 		//rectMatrix.update(1, 1, null)
 		// val A = CMatrix(matrixDim, matrixDim) { (i: Int, j: Int) => {
@@ -432,30 +432,30 @@ abstract class Shape[T <: Shape[T]] {
  	def filter(shapes: List[T]) (f: (T) => Boolean): List[T]
 }
 
-class Rectangle (
-	private var leftBottom: Int,
-	private var leftTop: Int,
-	private var rightTop: Int,
-	private var rightBottom: Int) extends Shape[Rectangle] { //extends Comparable[Rectangle];
+class Rectangle[T >: Int <: Int] (
+	private var leftBottom: T,
+	private var leftTop: T,
+	private var rightTop: T,
+	private var rightBottom: T) extends Shape[Rectangle[T]] { //extends Comparable[Rectangle];
 
 	def this() = this(0, 0, 0, 0)
-	def lBottom: Int = leftBottom
-	def lTop: Int = leftTop
-	def rTop: Int = rightTop
-	def rBottom: Int = rightBottom
- 	override def *(rectangle2: Rectangle) = multiply(this, rectangle2)
+	def lBottom: T = leftBottom
+	def lTop: T = leftTop
+	def rTop: T = rightTop
+	def rBottom: T = rightBottom
+ 	override def *(rectangle2: Rectangle[T]) = multiply(this, rectangle2)
  	override def *(value: Int) = multiply(this, value)
- 	override def +(rectangle2: Rectangle) = add(this, rectangle2)
- 	override def -(rectangle2: Rectangle) = substract(this, rectangle2)
-	override def sum: Int = {
+ 	override def +(rectangle2: Rectangle[T]) = add(this, rectangle2)
+ 	override def -(rectangle2: Rectangle[T]) = substract(this, rectangle2)
+	override def sum: T = {
 		return (this.lBottom + this.lTop + this.rTop + this.rBottom)
 	}
-	override def filter(rectangles: List[Rectangle]) (f: (Rectangle) => Boolean): List[Rectangle] = (
+	override def filter(rectangles: List[Rectangle[T]]) (f: (Rectangle[T]) => Boolean): List[Rectangle[T]] = (
 		for (rectangle <- rectangles; if f(rectangle))
 			yield rectangle
 	).to[List]
 
-	private def multiply(rectangle2: Rectangle): Unit = {
+	private def multiply(rectangle2: Rectangle[T]): Unit = {
 		this.leftBottom *= rectangle2.lBottom
 		this.leftTop *= rectangle2.lTop
 		this.rightTop *= rectangle2.rTop
@@ -469,52 +469,52 @@ class Rectangle (
 		this.rightBottom *= value
 	}
 
-	private def add(rectangle2: Rectangle): Unit = {
+	private def add(rectangle2: Rectangle[T]): Unit = {
 		this.leftBottom += rectangle2.lBottom
 		this.leftTop += rectangle2.lTop
 		this.rightTop += rectangle2.rTop
 		this.rightBottom += rectangle2.rBottom
 	}
 
- 	private def substract(rectangle2: Rectangle): Unit = {
+ 	private def substract(rectangle2: Rectangle[T]): Unit = {
 		this.leftBottom -= rectangle2.lBottom
 		this.leftTop -= rectangle2.lTop
 		this.rightTop -= rectangle2.rTop
 		this.rightBottom -= rectangle2.rBottom
  	}
 
-	private def multiply(rectangle1: Rectangle, rectangle2: Rectangle): Rectangle = {
-		new Rectangle(rectangle1.lBottom * rectangle2.lBottom,
+	private def multiply(rectangle1: Rectangle[T], rectangle2: Rectangle[T]): Rectangle[T] = {
+		new Rectangle[T](rectangle1.lBottom * rectangle2.lBottom,
 					  rectangle1.lTop * rectangle2.lTop,
 					  rectangle1.rTop * rectangle2.rTop,
 					  rectangle1.rBottom * rectangle2.rBottom
 					 )
 	}
 
-	private def multiply(rectangle1: Rectangle, value: Int): Rectangle = {
-		new Rectangle(rectangle1.lBottom * value,
+	private def multiply(rectangle1: Rectangle[T], value: Int): Rectangle[T] = {
+		new Rectangle[T](rectangle1.lBottom * value,
 					  rectangle1.lTop * value,
 					  rectangle1.rTop * value,
 					  rectangle1.rBottom * value
 					 )
 	}
 
-	private def add(rectangle1: Rectangle, rectangle2: Rectangle): Rectangle = {
-		new Rectangle(rectangle1.lBottom + rectangle2.lBottom,
+	private def add(rectangle1: Rectangle[T], rectangle2: Rectangle[T]): Rectangle[T] = {
+		new Rectangle[T](rectangle1.lBottom + rectangle2.lBottom,
 					  rectangle1.lTop + rectangle2.lTop,
 					  rectangle1.rTop + rectangle2.rTop,
 					  rectangle1.rBottom + rectangle2.rBottom
 					 )
 	}
 
- 	private def substract(rectangle1: Rectangle, rectangle2: Rectangle): Rectangle = {
-		new Rectangle(rectangle1.lBottom - rectangle2.lBottom,
+ 	private def substract(rectangle1: Rectangle[T], rectangle2: Rectangle[T]): Rectangle[T] = {
+		new Rectangle[T](rectangle1.lBottom - rectangle2.lBottom,
 					  rectangle1.lTop - rectangle2.lTop,
 					  rectangle1.rTop - rectangle2.rTop,
 					  rectangle1.rBottom - rectangle2.rBottom
 					 )
  	}
-	// override def compareTo(rectangle: Rectangle) = {
+	// override def compareTo(rectangle: Rectangle[T]) = {
 	//     val lBottom = this.leftBottom compareTo rectangle.leftBottom
 	//     if (lBottom != 0) lBottom
 	//     else this.leftTop compareTo rectangle.leftTop
@@ -524,5 +524,5 @@ class Rectangle (
 
 object Rectangle {
 	def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
-	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = new Rectangle(leftBottom, leftTop, rightTop, rightBottom)
+	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
 }
