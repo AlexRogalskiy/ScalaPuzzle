@@ -83,7 +83,7 @@ trait AppInitializer {
 
 		import scala.collection.mutable.ListBuffer
 		var result = new ListBuffer[RectIntMask]()
-		var matrixCombinations = rectangleMatrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => true/*(null != r)*/)
+		var matrixCombinations = rectangleMatrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => (null != r))
 		matrixCombinations.map( elem => {
 			elem.permutations.foreach { row =>
 				if(isShapeValid(row)) {
@@ -94,13 +94,13 @@ trait AppInitializer {
 		//println(result.length)
 		// sys.exit(0)
 		var buffLeft 	= new ListBuffer[RectIntMask]()
-		var buffRight 	= new ListBuffer[RectIntMask]()
 		var buffTop 	= new ListBuffer[RectIntMask]()
+		var buffRight 	= new ListBuffer[RectIntMask]()
 		var buffBottom 	= new ListBuffer[RectIntMask]()
 		def clearBuffers(): Unit = {
 			buffLeft.clear()
-			buffRight.clear()
 			buffTop.clear()
+			buffRight.clear()
 			buffBottom.clear()
 		}
 		def isNotEmpty(buffer: ListBuffer[RectIntMask]): Boolean = {
@@ -114,8 +114,33 @@ trait AppInitializer {
 				else if(elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) 	buffRight += elem2
 				else if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 		buffTop += elem2
 				else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	buffBottom += elem2
+				// if(elem.lTop == elem2.rBottom && elem2.intersect(elem).size == 1) 	buffTopLeft += elem2
+				// else if(elem.rTop == elem2.lBottom && elem2.intersect(elem).size == 1) 	buffTopRight += elem2
+				// else if(elem.lBottom == elem2.rTop && elem2.intersect(elem).size == 1) 	buffBottomLeft += elem2
+				// else if(elem.rBottom == elem2.lTop && elem2.intersect(elem).size == 1) 	buffBottomRight += elem2
+				// if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
 			})
 			if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
+				//println(buffTopLeft.length + " : " + buffTopRight.length + " : " + buffBottomLeft.length + " : " + buffBottomRight.length + " : " + buffLeft.length)
+				//var buffLeftRight = new ListBuffer[Rect2IntMask]()
+				// buffBottomLeft.map(elemBottomLeft => {
+				//  	buffTopLeft.map(elemTopLeft => {
+				//  		if(elemTopLeft.intersect(elemBottomLeft).isEmpty) {
+				// 			buffLeft.map(elemLeft => {
+				// 				if(elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
+				// 				 	count += 1
+				// 				}
+				// 			})
+				// 		}
+				//  		// buffBottomLeft.map(elemBottomLeft => {
+				//  		// 	if(elemTopLeft.intersect(elemBottomLeft).isEmpty && elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
+				// 			// 	println("ok")
+				// 			// }
+				//  		// })
+				//  	})
+				// })
+
+				//println(count)
 				// var buffLeftRight = new ListBuffer[Rect2IntMask]()
 				// buffLeft.map(elemLeft => {
 				//  	buffRight.map(elemRight => {
@@ -140,30 +165,30 @@ trait AppInitializer {
 				// 		}
 				// 	})
 				// })
-			// 	buffLeft.map(elemLeft => {
-			// 		buffRight.map(elemRight => {
-			// 			if(elemLeft.intersect(elemRight).isEmpty) {
-			// 				buffTop.map(elemTop => {
-			// 					buffBottom.map(elemBottom => {
-			// 						if(elemTop.intersect(elemBottom).isEmpty &&
-			// 							elemLeft.intersectLeft(elemTop).isEmpty &&
-			// 							elemTop.intersectTop(elemRight).isEmpty &&
-			// 							elemRight.intersectRight(elemBottom).isEmpty &&
-			// 							elemBottom.intersectBottom(elemLeft).isEmpty) {
-			// 							count += 1
-			// 							println("\n-------------")
-			// 							println("Center: " + elem)
-			// 							println("Left: " + elemLeft)
-			// 							println("Right: " + elemRight)
-			// 							println("Top: " + elemTop)
-			// 							println("Bottom: " + elemBottom)
-			// 							println("\n-------------")
-			// 						}
-			// 					})
-			// 				})
-			// 			}
-			// 		})
-			// 	})
+				buffLeft.map(elemLeft => {
+					buffRight.map(elemRight => {
+						if(elemLeft.intersect(elemRight).isEmpty) {
+							buffTop.map(elemTop => {
+								buffBottom.map(elemBottom => {
+									if(elemTop.intersect(elemBottom).isEmpty &&
+										elemLeft.intersectLeft(elemTop).isEmpty &&
+										elemTop.intersectTop(elemRight).isEmpty &&
+										elemRight.intersectRight(elemBottom).isEmpty &&
+										elemBottom.intersectBottom(elemLeft).isEmpty) {
+										count += 1
+										println("\n-------------")
+										println("Center: " + elem)
+										println("Left: " + elemLeft)
+										println("Right: " + elemRight)
+										println("Top: " + elemTop)
+										println("Bottom: " + elemBottom)
+										println("\n-------------")
+									}
+								})
+							})
+						}
+					})
+				})
 			}
 		})
 	// var bufferTop = new ListBuffer[Rect2IntMask]()
@@ -602,6 +627,7 @@ abstract class ShapeMask[T <: ShapeMask[T]] {
  	def intersect(shapeMask2: T): Set[_]
 
  	protected def tuple2ToSet[A] (t: (A, A)): Set[A] = Set(t._1, t._2)
+ 	protected def tuple3ToSet[A] (t: (A, A, A)): Set[A] = Set(t._1, t._2, t._3)
 	protected def tuple4ToSet[A] (t: (A, A, A, A)): Set[A] = Set(t._1, t._2, t._3, t._4)
 }
 
@@ -626,7 +652,7 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 	def topBorder: Tuple2[String, String] 								= Tuple2(getShapeID(leftTop), getShapeID(rightTop))
 	def rightBorder: Tuple2[String, String] 							= Tuple2(getShapeID(rightBottom), getShapeID(rightTop))
 	def bottomBorder: Tuple2[String, String] 							= Tuple2(getShapeID(leftBottom), getShapeID(rightBottom))
-	def border: Tuple2[Tuple2[String, String], Tuple2[String, String]] 	= Tuple2(topBorder, bottomBorder)
+	def border: Tuple4[String, String, String, String] 					= Tuple4(topBorder._1, topBorder._2, bottomBorder._1, bottomBorder._2)
 
 	val leftBorderSet: Set[String] 		= tuple2ToSet[String](this.leftBorder)
 	val topBorderSet: Set[String] 		= tuple2ToSet[String](this.topBorder)
@@ -677,11 +703,11 @@ class Rectangle2Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	def intersectTop(rectangle2Mask2: Rectangle2Mask[T]): Set[String]	 	= this.intersectMask[String](this.topBorderSet, rectangle2Mask2.borderSet)
 	def intersectBottom(rectangle2Mask2: Rectangle2Mask[T]): Set[String]	= this.intersectMask[String](this.bottomBorderSet, rectangle2Mask2.borderSet)
 
-	def leftBorder: Tuple4[String, String, String, String] 		= Tuple4(leftBottom.leftBorder._1, leftBottom.leftBorder._2, leftTop.leftBorder._1, leftTop.leftBorder._2)
-	def topBorder: Tuple4[String, String, String, String]		= Tuple4(leftTop.topBorder._1, leftTop.topBorder._2, rightTop.topBorder._1, rightTop.topBorder._2)
-	def rightBorder: Tuple4[String, String, String, String] 	= Tuple4(rightBottom.rightBorder._1, rightBottom.rightBorder._2, rightTop.rightBorder._1, rightTop.rightBorder._2)
-	def bottomBorder: Tuple4[String, String, String, String]	= Tuple4(rightBottom.bottomBorder._1, rightBottom.bottomBorder._2, leftBottom.bottomBorder._1, leftBottom.bottomBorder._2)
-	def center: Tuple4[String, String, String, String]			= Tuple4(leftBottom.rightBorder._2, leftTop.rightBorder._1, rightTop.leftBorder._1, rightBottom.leftBorder._2)
+	def leftBorder: Tuple4[String, String, String, String] 		= Tuple4(getShapeID(leftBottom.lTop), getShapeID(leftBottom.lBottom), getShapeID(leftTop.lTop), getShapeID(leftTop.lBottom))
+	def topBorder: Tuple4[String, String, String, String]		= Tuple4(getShapeID(leftTop.lTop), getShapeID(leftTop.rTop), getShapeID(rightTop.lTop), getShapeID(rightTop.rTop))
+	def rightBorder: Tuple4[String, String, String, String] 	= Tuple4(getShapeID(rightBottom.rTop), getShapeID(rightBottom.rBottom), getShapeID(rightTop.rTop), getShapeID(rightTop.rBottom))
+	def bottomBorder: Tuple4[String, String, String, String]	= Tuple4(getShapeID(rightBottom.rBottom), getShapeID(rightBottom.lBottom), getShapeID(leftBottom.lBottom), getShapeID(leftBottom.rBottom))
+	def center: Tuple4[String, String, String, String]			= Tuple4(getShapeID(leftBottom.rTop), getShapeID(leftTop.rBottom), getShapeID(rightTop.lBottom), getShapeID(rightBottom.lTop))
 
 	val leftBorderSet: Set[String] 			= tuple4ToSet[String](this.leftBorder)
 	val topBorderSet: Set[String] 			= tuple4ToSet[String](this.topBorder)
@@ -714,4 +740,65 @@ object Rectangle2Mask {
 	type RectMaskInt = RectangleMask[Rectangle[Int]]
 	implicit def apply(leftBottom: RectMaskInt, leftTop: RectMaskInt, rightTop: RectMaskInt, rightBottom: RectMaskInt) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: RectMaskInt, leftTop: RectMaskInt, rightTop: RectMaskInt, rightBottom: RectMaskInt) = new Rectangle2Mask[RectMaskInt](leftBottom, leftTop, rightTop, rightBottom)
+}
+
+class Rectangle4Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
+	private var left: T,
+	private var top: T,
+	private var right: T,
+	private var bottom: T) extends ShapeMask[Rectangle4Mask[T]] {
+
+	def this() = this(null, null, null, null)
+	def l: T 	= left
+	def t: T 	= top
+	def r: T 	= right
+	def b: T 	= bottom
+
+	def intersectLeft(rectangle2Mask2: Rectangle4Mask[T]): Set[String] 		= this.intersectMask[String](this.leftBorderSet, rectangle2Mask2.borderSet)
+	def intersectRight(rectangle2Mask2: Rectangle4Mask[T]): Set[String] 	= this.intersectMask[String](this.rightBorderSet, rectangle2Mask2.borderSet)
+	def intersectTop(rectangle2Mask2: Rectangle4Mask[T]): Set[String]	 	= this.intersectMask[String](this.topBorderSet, rectangle2Mask2.borderSet)
+	def intersectBottom(rectangle2Mask2: Rectangle4Mask[T]): Set[String]	= this.intersectMask[String](this.bottomBorderSet, rectangle2Mask2.borderSet)
+
+	def leftBorder: Tuple2[String, String] 				= Tuple2(getShapeID(left.lTop), getShapeID(left.lBottom))
+	def topBorder: Tuple2[String, String]				= Tuple2(getShapeID(top.lTop), getShapeID(top.rTop))
+	def rightBorder: Tuple2[String, String] 			= Tuple2(getShapeID(right.rTop), getShapeID(right.rBottom))
+	def bottomBorder: Tuple2[String, String]			= Tuple2(getShapeID(bottom.lBottom), getShapeID(bottom.rBottom))
+	def center: Tuple4[String, String, String, String] 	= Tuple4(getShapeID(left.rTop), getShapeID(left.rBottom), getShapeID(right.lTop), getShapeID(right.lBottom))
+
+	def leftTopBorder: Tuple3[String, String, String] 		= Tuple3(getShapeID(left.lTop), getShapeID(left.rTop), getShapeID(top.lTop))
+	def rightTopBorder: Tuple3[String, String, String] 		= Tuple3(getShapeID(right.lTop), getShapeID(right.rTop), getShapeID(top.rTop))
+	def leftBottomBorder: Tuple3[String, String, String] 	= Tuple3(getShapeID(left.lBottom), getShapeID(left.rBottom), getShapeID(bottom.lBottom))
+	def rightBottomBorder: Tuple3[String, String, String] 	= Tuple3(getShapeID(right.lBottom), getShapeID(right.rBottom), getShapeID(bottom.rBottom))
+
+	val leftBorderSet: Set[String] 			= tuple2ToSet[String](this.leftBorder)
+	val topBorderSet: Set[String] 			= tuple2ToSet[String](this.topBorder)
+	val rightBorderSet: Set[String] 		= tuple2ToSet[String](this.rightBorder)
+	val bottomBorderSet: Set[String] 		= tuple2ToSet[String](this.bottomBorder)
+	val centerSet: Set[String]				= tuple4ToSet[String](this.center)
+	val borderSet: Set[String]				= leftBorderSet.union(topBorderSet).union(rightBorderSet).union(bottomBorderSet)
+
+	def diff(rectangle2Mask2: Rectangle4Mask[T]): Set[_] = {
+		return this.borderSet.diff(rectangle2Mask2.borderSet)
+	}
+	def intersect(rectangle2Mask2: Rectangle4Mask[T]): Set[_] = {
+		return this.intersectMask(this.borderSet, rectangle2Mask2.borderSet)
+	}
+
+	private def getShapeID(shape: Rectangle[Int]): String = {
+		if (null == shape) {
+			return null
+		}
+		return shape.ID
+	}
+	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = {
+		return elemBorders.intersect(elem2Borders)
+	}
+
+	override def toString = s"\n{ Rectangle4Mask => left: ($left), top: ($top), right: ($right), bottom: ($bottom) }"
+}
+
+object Rectangle4Mask {
+	type RectMaskInt = RectangleMask[Rectangle[Int]]
+	implicit def apply(left: RectMaskInt, top: RectMaskInt, right: RectMaskInt, bottom: RectMaskInt) = init(left, top, right, bottom)
+	def init(left: RectMaskInt, top: RectMaskInt, right: RectMaskInt, bottom: RectMaskInt) = new Rectangle4Mask[RectMaskInt](left, top, right, bottom)
 }
