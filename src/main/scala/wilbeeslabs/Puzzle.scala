@@ -33,6 +33,7 @@ trait AppInitializer {
 	type OptionMap = Map[Symbol, Any]
 	type RectInt = Rectangle[Int]
 	type RectIntMask = RectangleMask[RectInt]
+	type Rect2IntMask = Rectangle2Mask[RectIntMask]
 
 	def runPuzzleTask(map: OptionMap): Unit = {
 		def isFullShapeValid(row: List[RectInt]): Boolean = {
@@ -90,12 +91,13 @@ trait AppInitializer {
 				}
 			}
 		})
-		println(result.length)
+		//println(result.length)
 		// sys.exit(0)
 		var buffLeft 	= new ListBuffer[RectIntMask]()
 		var buffRight 	= new ListBuffer[RectIntMask]()
 		var buffTop 	= new ListBuffer[RectIntMask]()
 		var buffBottom 	= new ListBuffer[RectIntMask]()
+		var buffer 		= new ListBuffer[Rect2IntMask]()
 		def clearBuffers(): Unit = {
 			buffLeft.clear()
 			buffRight.clear()
@@ -115,14 +117,21 @@ trait AppInitializer {
 				else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	buffBottom += elem2
 			})
 			if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
-				// var buffer 	= new ListBuffer[Rect2IntMask]()
-				// buffLeft.map(elemLeft => {
-				// 	buffRight.map(elemRight => {
-				// 		if(elemRight.intersectLeft(elemRight).isEmpty) {
-				// 			buffer += new Rect2IntMask(elemLeft, elem, elemRight)
+				buffLeft.map(elemLeft => {
+				 	buffRight.map(elemRight => {
+						if(elemLeft.intersect(elemRight).isEmpty) {
+							buffer += Rectangle2Mask(elemLeft, elemRight)
+						}
+				 	})
+				})
+				// buffTop.map(elemTop => {
+				//  	buffBottom.map(elemBottom => {
+				// 		if(elemTop.intersect(elemBottom).isEmpty) {
+				// 			buffer += Rectangle2Mask(elemTop, elemBottom)
 				// 		}
-				// 	}
-				// }
+				//  	})
+				// })
+
 			// 	buffLeft.map(elemLeft => {
 			// 		buffRight.map(elemRight => {
 			// 			if(elemLeft.intersect(elemRight).isEmpty) {
@@ -149,7 +158,15 @@ trait AppInitializer {
 			// 	})
 			}
 		})
-		println(count)
+	var bufferTop = new ListBuffer[Rect2IntMask]()
+	var bufferBottom = new ListBuffer[Rect2IntMask]()
+		buffer.map(elem => {
+			buffer.map(elem2 => {
+				if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 			bufferTop += elem2
+				else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	bufferBottom += elem2
+			})
+		})
+		println(bufferTop.length + " : " + bufferBottom.length)
     }
 
     def nextOption(map: OptionMap, list: List[String]): OptionMap = {
