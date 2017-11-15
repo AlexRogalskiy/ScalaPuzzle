@@ -1,12 +1,12 @@
 package com.wildbeeslabs
 
 object Puzzle extends AppInitializer {
-	/* Default usage mapping */
+	/* Default program usage information */
 	val usage =
 	"""
-	>>> Program Information <<<
+	>>> Program options information <<<
 
-		Usage: puzzle --file filename
+		Usage: run --file filename
 
 	>>> Copyright by wildbeeslabs (C) <<<
 	"""
@@ -20,7 +20,15 @@ object Puzzle extends AppInitializer {
     }
 }
 
-trait AppInitializer {
+trait AppType {
+	type OptionMap 		= Map[Symbol, Any]
+	type RectInt 		= Rectangle[Int]
+	type RectIntMask 	= RectangleMask[RectInt]
+	type RectMaskInt = RectangleMask[Rectangle[Int]]
+	type Rect4IntMask 	= Rectangle4Mask[RectIntMask]
+}
+
+trait AppInitializer extends AppType {
 	import scala.io.Codec
 	import scala.io.Source
 	import scala.io.BufferedSource
@@ -30,134 +38,155 @@ trait AppInitializer {
 	decoder.onMalformedInput(java.nio.charset.CodingErrorAction.IGNORE)
 	decoder.onUnmappableCharacter(java.nio.charset.CodingErrorAction.IGNORE)
 
-	type OptionMap 		= Map[Symbol, Any]
-	type RectInt 		= Rectangle[Int]
-	type RectIntMask 	= RectangleMask[RectInt]
-	type Rect4IntMask 	= Rectangle4Mask[RectIntMask]
+	private val defaultFileRecordFormat = "\\d{1}\\s+\\d\\s+\\d\\s+\\d"
+	private val defaultFileName = "default.txt"
 
 	def runPuzzleTask(map: OptionMap): Unit = {
-		var list = loadDataFromFile[List[Int]] (
-					map.getOrElse('file, "default.txt").toString,
-					(str: String) => { str.trim.matches("\\d{1}\\s+\\d\\s+\\d\\s+\\d") },
-					(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
-		)
-		var  rectangleList= list.map(elem => Rectangle(elem(2), elem(0), elem(1), elem(3)))
-		val matrixDimension = getMaxPowerOf2(rectangleList.length)
-		var rectangleMatrix = CMatrix[RectInt](matrixDimension, matrixDimension)
-		rectangleMatrix.fill(rectangleList, Rectangle.defaultPlaceHolder/*null*/)
-
-		import scala.collection.mutable.ListBuffer
-		var result = new ListBuffer[RectIntMask]()
-		var matrixCombinations = rectangleMatrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => true/*(null != r) // (r != Rectangle.defaultPlaceHolder*/)
-		matrixCombinations.map( elem => {
-			elem.permutations.foreach { row =>
-				var rectangle = RectangleMask(row(3), row(0), row(1), row(2))
-				if(rectangle.validate(Rectangle.defaultPlaceHolder)) {
-					result += rectangle
+		def createRectangleMatrix(): CMatrix[RectInt, Int] = {
+			var inputDataList = loadDataFromFile[List[Int]] (
+								map.getOrElse('file, defaultFileName).toString,
+								(str: String) => { str.trim.matches(defaultFileRecordFormat) },
+								(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
+			)
+			var rectangleList= inputDataList.map(elem => Rectangle(elem(2), elem(0), elem(1), elem(3)))
+			val matrixDimension = getMaxPowerOf2(rectangleList.length)
+			var resultSet = CMatrix[RectInt, Int](matrixDimension, matrixDimension)
+			resultSet.fill(rectangleList, Rectangle.defaultPlaceHolder/*null*/)
+			return resultSet
+		}
+		def generateRectangleCombinations(matrix: CMatrix[RectInt, Int]): Iterable[RectIntMask] = {
+			var resultSet = new ListBuffer[RectIntMask]()
+			var rectangleCombinations = matrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => (r != Rectangle.defaultPlaceHolder)/*(null != r) // (r != Rectangle.defaultPlaceHolder)*/)
+			rectangleCombinations.map( elem => {
+				elem.permutations.foreach { row =>
+					var rectangleMask = RectangleMask(row(3), row(0), row(1), row(2))
+					if(rectangleMask.validate(Rectangle.defaultPlaceHolder)) {
+						resultSet += rectangleMask
+					}
 				}
-			}
-		})
-		println(result.length)
-		var buffLeft 	= new ListBuffer[RectIntMask]()
-		var buffTop 	= new ListBuffer[RectIntMask]()
-		var buffRight 	= new ListBuffer[RectIntMask]()
-		var buffBottom 	= new ListBuffer[RectIntMask]()
-		def clearBuffers(): Unit = {
-			buffLeft.clear()
-			buffTop.clear()
-			buffRight.clear()
-			buffBottom.clear()
-		}
-		def isNotEmpty(buffer: ListBuffer[RectIntMask]): Boolean = {
-			return !buffer.isEmpty
-		}
-		//var count = 0
-		var rectangleMaskSet = new ListBuffer[Rect4IntMask]()
-		var rectangleMapping = result.filter(elem => !elem.hasPlaceholder(Rectangle.defaultPlaceHolder)).map( elem => {
-			clearBuffers()
-			result.map( elem2 => {
-				if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) 			buffLeft += elem2
-				else if(elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) 	buffRight += elem2
-				else if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 		buffTop += elem2
-				else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	buffBottom += elem2
-				// if(elem.lTop == elem2.rBottom && elem2.intersect(elem).size == 1) 	buffTopLeft += elem2
-				// else if(elem.rTop == elem2.lBottom && elem2.intersect(elem).size == 1) 	buffTopRight += elem2
-				// else if(elem.lBottom == elem2.rTop && elem2.intersect(elem).size == 1) 	buffBottomLeft += elem2
-				// else if(elem.rBottom == elem2.lTop && elem2.intersect(elem).size == 1) 	buffBottomRight += elem2
-				// if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
 			})
-			if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
-				//println(buffTopLeft.length + " : " + buffTopRight.length + " : " + buffBottomLeft.length + " : " + buffBottomRight.length + " : " + buffLeft.length)
-				//var buffLeftRight = new ListBuffer[Rect2IntMask]()
-				// buffBottomLeft.map(elemBottomLeft => {
-				//  	buffTopLeft.map(elemTopLeft => {
-				//  		if(elemTopLeft.intersect(elemBottomLeft).isEmpty) {
-				// 			buffLeft.map(elemLeft => {
-				// 				if(elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
-				// 				 	count += 1
-				// 				}
-				// 			})
-				// 		}
-				//  		// buffBottomLeft.map(elemBottomLeft => {
-				//  		// 	if(elemTopLeft.intersect(elemBottomLeft).isEmpty && elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
-				// 			// 	println("ok")
-				// 			// }
-				//  		// })
-				//  	})
-				// })
+			return resultSet
+		}
+		def generateRectanglePermutations(list: Iterable[RectIntMask]): Iterable[Rect4IntMask] = {
+			/* Buffers for left / top / right / bottom sides of rectangle */
+			var buffLeft 	= new ListBuffer[RectIntMask]()
+			var buffTop 	= new ListBuffer[RectIntMask]()
+			var buffRight 	= new ListBuffer[RectIntMask]()
+			var buffBottom 	= new ListBuffer[RectIntMask]()
+			/* Buffer for left / top / right / bottom sides of rectangle mask */
+			var resultSet 	= new ListBuffer[Rect4IntMask]()
 
-				//println(count)
-				// var buffLeftRight = new ListBuffer[Rect2IntMask]()
-				// buffLeft.map(elemLeft => {
-				//  	buffRight.map(elemRight => {
-				// 		if(elemLeft.intersect(elemRight).isEmpty) {
-				// 			buffLeftRight += Rectangle2Mask(elemLeft, elemRight)
-				// 		}
-				//  	})
-				// })
-				// var buffTopBottom = new ListBuffer[Rect2IntMask]()
-				// buffTop.map(elemTop => {
-				//  	buffBottom.map(elemBottom => {
-				// 		if(elemTop.intersect(elemBottom).isEmpty) {
-				// 			buffTopBottom += Rectangle2Mask(elemTop, elemBottom)
-				// 		}
-				//  	})
-				// })
-				// buffLeftRight.map(elemLeftRight => {
-				// 	buffTopBottom.map(elemTopBottom => {
-				// 		if(elemLeftRight.intersectCenter(elemTopBottom).size == 4) {
-				// 			//println(elemLeftRight + " : " + elemTopBottom)
-				// 			count += 1
-				// 		}
-				// 	})
-				// })
-				buffLeft.map(elemLeft => {
-					buffRight.map(elemRight => {
-						if(elemLeft.intersect(elemRight).isEmpty) {
-							buffTop.map(elemTop => {
-								buffBottom.map(elemBottom => {
-									if(elemTop.intersect(elemBottom).isEmpty &&
-										elemLeft.intersectLeft(elemTop).isEmpty &&
-										elemTop.intersectTop(elemRight).isEmpty &&
-										elemRight.intersectRight(elemBottom).isEmpty &&
-										elemBottom.intersectBottom(elemLeft).isEmpty) {
-										rectangleMaskSet += Rectangle4Mask(elemLeft, elemTop, elemRight, elemBottom)
-										//count += 1
-										// println("\n-------------")
-										// println("Center: " + elem)
-										// println("Left: " + elemLeft)
-										// println("Right: " + elemRight)
-										// println("Top: " + elemTop)
-										// println("Bottom: " + elemBottom)
-										// println("\n-------------")
-									}
-								})
-							})
-						}
-					})
-				})
+			def clearBuffers(): Unit = {
+				buffLeft.clear()
+				buffTop.clear()
+				buffRight.clear()
+				buffBottom.clear()
 			}
-		})
+			def isNotEmpty(buffer: ListBuffer[RectIntMask]): Boolean = {
+				return !buffer.isEmpty
+			}
+
+			list.filter(elem => !elem.hasPlaceholder(Rectangle.defaultPlaceHolder)).map( elem => {
+				clearBuffers()
+				list.map( elem2 => {
+					if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) 			buffLeft += elem2
+					else if(elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) 	buffRight += elem2
+					else if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 		buffTop += elem2
+					else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	buffBottom += elem2
+					// if(elem.lTop == elem2.rBottom && elem2.intersect(elem).size == 1) 	buffTopLeft += elem2
+					// else if(elem.rTop == elem2.lBottom && elem2.intersect(elem).size == 1) 	buffTopRight += elem2
+					// else if(elem.lBottom == elem2.rTop && elem2.intersect(elem).size == 1) 	buffBottomLeft += elem2
+					// else if(elem.rBottom == elem2.lTop && elem2.intersect(elem).size == 1) 	buffBottomRight += elem2
+					// if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
+				})
+				if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
+					//println(buffTopLeft.length + " : " + buffTopRight.length + " : " + buffBottomLeft.length + " : " + buffBottomRight.length + " : " + buffLeft.length)
+					//var buffLeftRight = new ListBuffer[Rect2IntMask]()
+					// buffBottomLeft.map(elemBottomLeft => {
+					//  	buffTopLeft.map(elemTopLeft => {
+					//  		if(elemTopLeft.intersect(elemBottomLeft).isEmpty) {
+					// 			buffLeft.map(elemLeft => {
+					// 				if(elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
+					// 				 	count += 1
+					// 				}
+					// 			})
+					// 		}
+					//  		// buffBottomLeft.map(elemBottomLeft => {
+					//  		// 	if(elemTopLeft.intersect(elemBottomLeft).isEmpty && elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
+					// 			// 	println("ok")
+					// 			// }
+					//  		// })
+					//  	})
+					// })
+
+					//println(count)
+					// var buffLeftRight = new ListBuffer[Rect2IntMask]()
+					// buffLeft.map(elemLeft => {
+					//  	buffRight.map(elemRight => {
+					// 		if(elemLeft.intersect(elemRight).isEmpty) {
+					// 			buffLeftRight += Rectangle2Mask(elemLeft, elemRight)
+					// 		}
+					//  	})
+					// })
+					// var buffTopBottom = new ListBuffer[Rect2IntMask]()
+					// buffTop.map(elemTop => {
+					//  	buffBottom.map(elemBottom => {
+					// 		if(elemTop.intersect(elemBottom).isEmpty) {
+					// 			buffTopBottom += Rectangle2Mask(elemTop, elemBottom)
+					// 		}
+					//  	})
+					// })
+					// buffLeftRight.map(elemLeftRight => {
+					// 	buffTopBottom.map(elemTopBottom => {
+					// 		if(elemLeftRight.intersectCenter(elemTopBottom).size == 4) {
+					// 			//println(elemLeftRight + " : " + elemTopBottom)
+					// 			count += 1
+					// 		}
+					// 	})
+					// })
+					buffLeft.map(elemLeft => {
+						buffRight.map(elemRight => {
+							if(elemLeft.intersect(elemRight, (str: String) => str != Rectangle.defaultPlaceHolder.ID).isEmpty) {
+								buffTop.map(elemTop => {
+									buffBottom.map(elemBottom => {
+										if(elemTop.intersect(elemBottom, (str: String) => str != Rectangle.defaultPlaceHolder.ID).isEmpty &&
+											elemLeft.intersectLeft(elemTop).isEmpty &&
+											elemTop.intersectTop(elemRight).isEmpty &&
+											elemRight.intersectRight(elemBottom).isEmpty &&
+											elemBottom.intersectBottom(elemLeft).isEmpty) {
+											var rectangle4Mask = Rectangle4Mask(elemLeft, elemTop, elemRight, elemBottom)
+											if(rectangle4Mask.validate(Rectangle.defaultPlaceHolder)) {
+												resultSet += rectangle4Mask
+											}
+										}
+									})
+								})
+							}
+						})
+					})
+				}
+			})
+			return resultSet
+		}
+		def showRectangleResultSet(list: Iterable[Rect4IntMask]): Unit = {
+			if(list.isEmpty) {
+				println("Cannot find possible rectangle combinations, please check again possible options / input data set")
+				return
+			}
+			println(s"\nProgram total report: (${list.size}) possible combination(s) successfully found:")
+			var count = 1
+			list.map(elem => {
+				println("-" * 37 + s" (${count}) " + "-" * 37)
+				println(elem)
+				println("-" * 80)
+				count += 1
+			})
+		}
+
+		var rectangleMatrix = createRectangleMatrix()
+		var rectCombiList = generateRectangleCombinations(rectangleMatrix)
+		var rectPermList = generateRectanglePermutations(rectCombiList)
+		showRectangleResultSet(rectPermList)
 	// var bufferTop = new ListBuffer[Rect2IntMask]()
 	// var bufferBottom = new ListBuffer[Rect2IntMask]()
 	// 	buffer.map(elem => {
@@ -167,7 +196,7 @@ trait AppInitializer {
 	// 		})
 	// 	})
 	// 	println(bufferTop.length + " : " + bufferBottom.length)
-		println(rectangleMaskSet.length)
+		//println(rectangleMaskSet.length)
     }
 
     def nextOption(map: OptionMap, list: List[String]): OptionMap = {
@@ -231,7 +260,7 @@ trait AppInitializer {
     }
 }
 
-class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
+class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int = 1) {
 	import utils.ConditionCheck._
 	import scala.collection.mutable.ListBuffer
 	/* Matrix type aliases */
@@ -249,8 +278,8 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
  	def size: Int = rowCount * colCount
  	def isSquare: Boolean = (rowCount == colCount)
  	def minor(i: Int, j: Int): Unit = minorMatrix(matrix, i, j)
- 	def beside(matrix2: CMatrix[T]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
-  	def above(matrix2: CMatrix[T]): Unit = this.matrix ::: matrix2.matrix
+ 	def beside(matrix2: CMatrix[T, S]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
+  	def above(matrix2: CMatrix[T, S]): Unit = this.matrix ::: matrix2.matrix
   	
   	def filterRows(filter: (Row) => Boolean): Matrix = filterBy[Row](this.matrix, filter)
   	def sortRows(sort: (Row, Row) => Boolean): Matrix = sortBy[Row](this.matrix, sort)
@@ -258,14 +287,13 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
   	def permutate(rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = permutateMatrix(this.matrix, rowFilter, elemPreFilter, elemPostFilter)
   	def combinate(size: Int, rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = combinateMatrix(this.matrix, size, rowFilter, elemPreFilter, elemPostFilter)
  	
- 	def *(matrix2: CMatrix[T]): Unit = multiplyMatrices(this.matrix, matrix2.matrix)
- 	def *(value: Int): Unit = multiply(this.matrix, value)
- 	def +(matrix2: CMatrix[T]): Unit = add(this.matrix, matrix2.matrix)
- 	def -(matrix2: CMatrix[T]): Unit = substract(this.matrix, matrix2.matrix)
- 	def update(matrix2: Matrix): Unit = this.matrix = matrix2
- 	def fill(value: T): Unit = {
-		this.foreach((t: T) => { value })
-  	}
+ 	def *(matrix2: CMatrix[T, S]): Unit 	= multiplyMatrices(this.matrix, matrix2.matrix)
+ 	def *(value: S): Unit 					= multiply(this.matrix, value)
+ 	def +(matrix2: CMatrix[T, S]): Unit 	= add(this.matrix, matrix2.matrix)
+ 	def -(matrix2: CMatrix[T, S]): Unit 	= substract(this.matrix, matrix2.matrix)
+ 	def update(matrix2: Matrix): Unit 	= this.matrix = matrix2
+ 	def fill(value: T): Unit = this.foreach( (t: T) => { value } )
+
 	def fill(list: List[T], defaultValue: T = null): Unit = {
 		def insertPlaceHolder(buffer: ListBuffer[T], delta: Int, value: T): Unit = {
 			var c = 0
@@ -351,10 +379,10 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 		return list.sortWith(s(_, _))
 	}
 
-	private def init(numRows: Int, numCols: Int) (f: (Int, Int) => T): Matrix = (
- 		for(i <- 1 to numRows) yield
- 			(for(j <- 1 to numCols) yield f(i, j)).to[List]
- 	).to[List]
+	private def init(numRows: Int, numCols: Int) (f: (Int, Int) => T): Matrix = {
+		(for(i <- 1 to numRows) yield
+ 			(for(j <- 1 to numCols) yield f(i, j)).to[List]).to[List]
+	}
 
 	private def multiplyRows(row1: Row, row2: Row): T = {
 		requireEquals(row1.length, row2.length)
@@ -368,7 +396,7 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 	 	return matrix.map(_.head) :: transpose(matrix.map(_.tail))
 	}
 
-	private def multiply(matrix: Matrix, value: Int): Unit = {
+	private def multiply(matrix: Matrix, value: S): Unit = {
 		matrix.map( _.map( _ * value ) )
 	}
 
@@ -478,13 +506,13 @@ class CMatrix[T >: Null <: Shape[T]](numRows: Int = 1, numCols: Int = 1) {
 }
 
 object CMatrix {
-	implicit def apply[T >: Null <: Shape[T]](numRows: Int, numCols: Int): CMatrix[T] = new CMatrix[T](numRows, numCols)
+	implicit def apply[T >: Null <: Shape[T, S], S <: Any](numRows: Int, numCols: Int): CMatrix[T, S] = new CMatrix[T, S](numRows, numCols)
 }
 
-abstract class Shape[T <: Shape[T]] {
-	def sum(): Int
+abstract class Shape[T <: Shape[T, S], S] {
+	def sum: S
+	def *(value: S): T
 	def *(shape2: T): T
-	def *(value: Int): T
 	def +(shape2: T): T
  	def -(shape2: T): T
  	def filter(shapes: List[T]) (f: (T) => Boolean): List[T]
@@ -494,36 +522,32 @@ class Rectangle[T >: Int <: Int] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
-	private var rightBottom: T) extends Shape[Rectangle[T]] { //extends Comparable[Rectangle];
+	private var rightBottom: T) extends Shape[Rectangle[T], Int] { //extends Comparable[Rectangle];
 
 	private val uuid: String = java.util.UUID.randomUUID.toString
-	private var placeHolder: Boolean = false
 
-	def this() = this(0, 0, 0, 0)
+	def this() 		= this(0, 0, 0, 0)
 	def lBottom: T 	= leftBottom
 	def lTop: T 	= leftTop
 	def rTop: T 	= rightTop
 	def rBottom: T 	= rightBottom
 	def ID: String 	= uuid
-	// def isPlaceHolder(): Boolean = placeHolder
-	// def setPlaceHolder(isPlaceHolder: Boolean): Unit = placeHolder = isPlaceHolder
 
  	override def *(rectangle2: Rectangle[T]) 	= multiply(this, rectangle2)
- 	override def *(value: Int) 					= multiply(this, value)
+ 	override def *(value: Int)					= multiply(this, value)
  	override def +(rectangle2: Rectangle[T]) 	= add(this, rectangle2)
  	override def -(rectangle2: Rectangle[T]) 	= substract(this, rectangle2)
-	override def sum(): T = (this.lBottom + this.lTop + this.rTop + this.rBottom)
+	override def sum: T							= (this.lBottom + this.lTop + this.rTop + this.rBottom)
 
-	override def filter(rectangles: List[Rectangle[T]]) (f: (Rectangle[T]) => Boolean): List[Rectangle[T]] = (
-		for (rectangle <- rectangles; if f(rectangle))
-			yield rectangle
-	).to[List]
+	override def filter(rectangles: List[Rectangle[T]]) (f: (Rectangle[T]) => Boolean): List[Rectangle[T]] = {
+		(for (rectangle <- rectangles; if f(rectangle)) yield rectangle).to[List]
+	}
 
 	private def multiply(rectangle2: Rectangle[T]): Unit = {
-		this.leftBottom *= rectangle2.lBottom
-		this.leftTop *= rectangle2.lTop
-		this.rightTop *= rectangle2.rTop
-		this.rightBottom *= rectangle2.rBottom
+		this.leftBottom 	*= rectangle2.lBottom
+		this.leftTop 		*= rectangle2.lTop
+		this.rightTop 		*= rectangle2.rTop
+		this.rightBottom 	*= rectangle2.rBottom
 	}
 
 	private def multiply(value: Int): Unit = {
@@ -549,33 +573,33 @@ class Rectangle[T >: Int <: Int] (
 
 	private def multiply(rectangle1: Rectangle[T], rectangle2: Rectangle[T]): Rectangle[T] = {
 		new Rectangle[T](rectangle1.lBottom * rectangle2.lBottom,
-					  	rectangle1.lTop * rectangle2.lTop,
-					  	rectangle1.rTop * rectangle2.rTop,
-					  	rectangle1.rBottom * rectangle2.rBottom
+					  	rectangle1.lTop 	* rectangle2.lTop,
+					  	rectangle1.rTop 	* rectangle2.rTop,
+					  	rectangle1.rBottom 	* rectangle2.rBottom
 		)
 	}
 
 	private def multiply(rectangle1: Rectangle[T], value: Int): Rectangle[T] = {
 		new Rectangle[T](rectangle1.lBottom * value,
-					 	rectangle1.lTop * value,
-					  	rectangle1.rTop * value,
-					  	rectangle1.rBottom * value
+					 	rectangle1.lTop 	* value,
+					  	rectangle1.rTop 	* value,
+					  	rectangle1.rBottom 	* value
 		)
 	}
 
 	private def add(rectangle1: Rectangle[T], rectangle2: Rectangle[T]): Rectangle[T] = {
 		new Rectangle[T](rectangle1.lBottom + rectangle2.lBottom,
-					  	rectangle1.lTop + rectangle2.lTop,
-					  	rectangle1.rTop + rectangle2.rTop,
-					  	rectangle1.rBottom + rectangle2.rBottom
+					  	rectangle1.lTop 	+ rectangle2.lTop,
+					  	rectangle1.rTop 	+ rectangle2.rTop,
+					  	rectangle1.rBottom 	+ rectangle2.rBottom
 		)
 	}
 
  	private def substract(rectangle1: Rectangle[T], rectangle2: Rectangle[T]): Rectangle[T] = {
 		new Rectangle[T](rectangle1.lBottom - rectangle2.lBottom,
-						rectangle1.lTop - rectangle2.lTop,
-					  	rectangle1.rTop - rectangle2.rTop,
-					  	rectangle1.rBottom - rectangle2.rBottom
+						rectangle1.lTop 	- rectangle2.lTop,
+					  	rectangle1.rTop 	- rectangle2.rTop,
+					  	rectangle1.rBottom 	- rectangle2.rBottom
 		)
  	}
 
@@ -585,33 +609,30 @@ class Rectangle[T >: Int <: Int] (
 	//     if (lBottom != 0) lBottom
 	//     else this.leftTop compareTo rectangle.leftTop
  	// }
-	override def toString = s"Rectangle => { ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
+	override def toString = s"\n{ Rectangle => ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 }
 
-object Rectangle {
-	private val rectangle = new Rectangle[Int](0, 0, 0, 0)
-
+object Rectangle extends AppType {
+	private val placeHolder = new Rectangle[Int](0, 0, 0, 0)
 	implicit def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
-	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): Rectangle[Int] = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
-	def defaultPlaceHolder: Rectangle[Int] = {
-		return rectangle
-	}
+	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
+	def defaultPlaceHolder: RectInt = placeHolder
 }
 
-abstract class ShapeMask[T <: ShapeMask[T]] {
- 	def diff(shapeMask2: T): Set[_]
- 	def intersect(shapeMask2: T): Set[_]
+abstract class ShapeMask[T <: ShapeMask[T, S], S <: Any] {
+ 	def diff(shapeMask2: T, f: (S) => Boolean = (S) => true): Set[S]
+ 	def intersect(shapeMask2: T, f: (S) => Boolean = (S) => true): Set[S]
 
- 	protected def tuple2ToSet[A] (t: (A, A)): Set[A] = Set(t._1, t._2)
- 	protected def tuple3ToSet[A] (t: (A, A, A)): Set[A] = Set(t._1, t._2, t._3)
-	protected def tuple4ToSet[A] (t: (A, A, A, A)): Set[A] = Set(t._1, t._2, t._3, t._4)
+ 	protected def tuple2ToSet[A] (t: (A, A)): Set[A] 		= Set(t._1, t._2)
+ 	protected def tuple3ToSet[A] (t: (A, A, A)): Set[A] 	= Set(t._1, t._2, t._3)
+	protected def tuple4ToSet[A] (t: (A, A, A, A)): Set[A] 	= Set(t._1, t._2, t._3, t._4)
 }
 
 class RectangleMask[T >: Null <: Rectangle[Int]] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
-	private var rightBottom: T) extends ShapeMask[RectangleMask[T]] {
+	private var rightBottom: T) extends ShapeMask[RectangleMask[T], String] {
 
 	def this() = this(null, null, null, null)
 	def lBottom: T 	= leftBottom
@@ -619,6 +640,12 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 	def rTop: T 	= rightTop
 	def rBottom: T 	= rightBottom
 	def hasPlaceholder(rectShape: T = null): Boolean = this.borderSet.contains(getShapeID(rectShape))
+
+	def cValue: Int = (leftTop.rBottom + rightTop.lBottom + rightBottom.lTop + leftBottom.rTop)
+	def lValue: Int = (leftTop.lBottom + leftBottom.lTop)
+	def tValue: Int = (leftTop.rTop + rightTop.lTop)
+	def rValue: Int = (rightTop.rBottom + rightBottom.rTop)
+	def bValue: Int = (rightBottom.lBottom + leftBottom.rBottom)
 
 	def intersectLeft(rectangleMask2: RectangleMask[T]): Set[String] 	= this.intersectMask[String](this.leftBorderSet, rectangleMask2.borderSet)
 	def intersectRight(rectangleMask2: RectangleMask[T]): Set[String] 	= this.intersectMask[String](this.rightBorderSet, rectangleMask2.borderSet)
@@ -637,55 +664,45 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 	val bottomBorderSet: Set[String] 	= tuple2ToSet[String](this.bottomBorder)
 	val borderSet: Set[String] 			= topBorderSet.union(bottomBorderSet)
 
-	def diff(rectangleMask2: RectangleMask[T]): Set[_] = {
-		return this.borderSet.diff(rectangleMask2.borderSet)
+	override def diff(rectangleMask2: RectangleMask[T], f: (String) => Boolean = (String) => true): Set[String] = {
+		return this.borderSet.filter(f(_)).diff(rectangleMask2.borderSet)
 	}
-	def intersect(rectangleMask2: RectangleMask[T]): Set[_] = {
-		return this.intersectMask(this.borderSet, rectangleMask2.borderSet)
+	override def intersect(rectangleMask2: RectangleMask[T], f: (String) => Boolean = (String) => true): Set[String] = {
+		return this.intersectMask[String](this.borderSet.filter(f(_)), rectangleMask2.borderSet)
 	}
 
 	def validate(placeHolder: T = null): Boolean = {
+		def isPerimeterValid(): Boolean = {
+			return (this.lValue <= 10 && this.tValue <= 10 && this.rValue <= 10 && this.bValue <= 10)
+		}
 		def isFullValid(): Boolean = {
-			if((leftTop.rBottom + rightTop.lBottom + rightBottom.lTop + leftBottom.rTop) == 10 &&
-				(leftTop.lBottom + leftBottom.lTop) <= 10 &&
-				(leftTop.rTop + rightTop.lTop) <= 10 &&
-				(rightTop.rBottom + rightBottom.rTop) <= 10 &&
-				(rightBottom.lBottom + leftBottom.rBottom) <= 10) {
+			if(this.cValue == 10 && isPerimeterValid())
 				return true
-			}
 			return false
 		}
 		def isPartialValid(): Boolean = {
-			if((leftTop.rBottom + rightTop.lBottom + rightBottom.lTop + leftBottom.rTop) <= 10 &&
-				(leftTop.lBottom + leftBottom.lTop) <= 10 &&
-				(leftTop.rTop + rightTop.lTop) <= 10 &&
-				(rightTop.rBottom + rightBottom.rTop) <= 10 &&
-				(rightBottom.lBottom + leftBottom.rBottom) <= 10) {
+			if(this.cValue <= 10 && isPerimeterValid())
 				return true
-			}
 			return false
 		}
-		if(this.hasPlaceholder(placeHolder)) {
+		if(this.hasPlaceholder(placeHolder))
 			return isPartialValid()
-		}
 		return isFullValid()
 	}
 
 	private def getShapeID(rectShape: T): String = {
-		if (null == rectShape) {
+		if (null == rectShape)
 			return null
-		}
 		return rectShape.ID
 	}
 	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = {
 		return elemBorders.intersect(elem2Borders)
 	}
 
-	override def toString = s"\n{ RectangleMask => leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
+	override def toString = s"\n{ RectangleMask => \nleftTop: ($lTop), \nrightTop: ($rTop), \nrightBottom: ($rBottom), \nleftBottom: ($lBottom) }"
 }
 
-object RectangleMask {
-	type RectInt = Rectangle[Int]
+object RectangleMask extends AppType {
 	implicit def apply(leftBottom: RectInt, leftTop: RectInt, rightTop: RectInt, rightBottom: RectInt) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: RectInt, leftTop: RectInt, rightTop: RectInt, rightBottom: RectInt): RectangleMask[RectInt] = new RectangleMask[RectInt](leftBottom, leftTop, rightTop, rightBottom)
 }
@@ -694,7 +711,7 @@ class Rectangle2Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
-	private var rightBottom: T) extends ShapeMask[Rectangle2Mask[T]] {
+	private var rightBottom: T) extends ShapeMask[Rectangle2Mask[T], String] {
 
 	def this() = this(null, null, null, null)
 	def lBottom: T 	= leftBottom
@@ -720,11 +737,11 @@ class Rectangle2Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	val centerSet: Set[String]				= tuple4ToSet[String](this.center)
 	val borderSet: Set[String]				= topBorderSet.union(bottomBorderSet).union(leftBorderSet).union(rightBorderSet)
 
-	def diff(rectangle2Mask2: Rectangle2Mask[T]): Set[_] = {
-		return this.borderSet.diff(rectangle2Mask2.borderSet)
+	override def diff(rectangle2Mask2: Rectangle2Mask[T], f: (String) => Boolean = (String) => true): Set[String] = {
+		return this.borderSet.filter(f(_)).diff(rectangle2Mask2.borderSet)
 	}
-	def intersect(rectangle2Mask2: Rectangle2Mask[T]): Set[_] = {
-		return this.intersectMask(this.borderSet, rectangle2Mask2.borderSet)
+	override def intersect(rectangle2Mask2: Rectangle2Mask[T], f: (String) => Boolean = (String) => true): Set[String] = {
+		return this.intersectMask[String](this.borderSet.filter(f(_)), rectangle2Mask2.borderSet)
 	}
 
 	private def getShapeID(shape: Rectangle[Int]): String = {
@@ -737,11 +754,10 @@ class Rectangle2Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 		return elemBorders.intersect(elem2Borders)
 	}
 
-	override def toString = s"\n{ Rectangle2Mask => leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom }"
+	override def toString = s"\n{ Rectangle2Mask => \n\tleftTop: ($lTop), \n\trightTop: ($rTop), \n\trightBottom: ($rBottom), \n\tleftBottom: ($lBottom) }"
 }
 
-object Rectangle2Mask {
-	type RectMaskInt = RectangleMask[Rectangle[Int]]
+object Rectangle2Mask extends AppType {
 	implicit def apply(leftBottom: RectMaskInt, leftTop: RectMaskInt, rightTop: RectMaskInt, rightBottom: RectMaskInt) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: RectMaskInt, leftTop: RectMaskInt, rightTop: RectMaskInt, rightBottom: RectMaskInt): Rectangle2Mask[RectMaskInt] = new Rectangle2Mask[RectMaskInt](leftBottom, leftTop, rightTop, rightBottom)
 }
@@ -750,13 +766,13 @@ class Rectangle4Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	private var left: T,
 	private var top: T,
 	private var right: T,
-	private var bottom: T) extends ShapeMask[Rectangle4Mask[T]] {
+	private var bottom: T) extends ShapeMask[Rectangle4Mask[T], String] {
 
 	def this() = this(null, null, null, null)
-	def lTop: RectangleMask[Rectangle[Int]] 	= RectangleMask(left.lTop, null, top.lTop, left.rTop)
-	def rTop: RectangleMask[Rectangle[Int]] 	= RectangleMask(right.lTop, top.rTop, null, right.rTop)
-	def rBottom: RectangleMask[Rectangle[Int]] 	= RectangleMask(bottom.rBottom, right.lBottom, right.rBottom, null)
-	def lBottom: RectangleMask[Rectangle[Int]] 	= RectangleMask(null, left.lBottom, left.rBottom, bottom.lBottom)
+	def lTop: RectangleMask[Rectangle[Int]] 	= RectangleMask(left.lTop, Rectangle.defaultPlaceHolder, top.lTop, left.rTop)
+	def rTop: RectangleMask[Rectangle[Int]] 	= RectangleMask(right.lTop, top.rTop, Rectangle.defaultPlaceHolder, right.rTop)
+	def rBottom: RectangleMask[Rectangle[Int]] 	= RectangleMask(bottom.rBottom, right.lBottom, right.rBottom, Rectangle.defaultPlaceHolder)
+	def lBottom: RectangleMask[Rectangle[Int]] 	= RectangleMask(Rectangle.defaultPlaceHolder, left.lBottom, left.rBottom, bottom.lBottom)
 
 	def intersectLeft(rectangle2Mask2: Rectangle4Mask[T]): Set[String] 		= this.intersectMask[String](this.leftBorderSet, rectangle2Mask2.borderSet)
 	def intersectRight(rectangle2Mask2: Rectangle4Mask[T]): Set[String] 	= this.intersectMask[String](this.rightBorderSet, rectangle2Mask2.borderSet)
@@ -781,15 +797,15 @@ class Rectangle4Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	val centerSet: Set[String]				= tuple4ToSet[String](this.center)
 	val borderSet: Set[String]				= leftBorderSet.union(topBorderSet).union(rightBorderSet).union(bottomBorderSet)
 
-	def diff(rectangle2Mask2: Rectangle4Mask[T]): Set[_] = {
-		return this.borderSet.diff(rectangle2Mask2.borderSet)
+	override def diff(rectangle2Mask2: Rectangle4Mask[T], f: (String) => Boolean = (String) => true): Set[String] = {
+		return this.borderSet.filter(f(_)).diff(rectangle2Mask2.borderSet)
 	}
-	def intersect(rectangle2Mask2: Rectangle4Mask[T]): Set[_] = {
-		return this.intersectMask(this.borderSet, rectangle2Mask2.borderSet)
+	override def intersect(rectangle2Mask2: Rectangle4Mask[T], f: (String) => Boolean = (String) => true): Set[String] = {
+		return this.intersectMask[String](this.borderSet.filter(f(_)), rectangle2Mask2.borderSet)
 	}
 
 	def validate(placeHolder: Rectangle[Int] = null): Boolean = {
-		if(lTop.validate(placeHolder) && rTop.validate(placeHolder) || rBottom.validate(placeHolder) || lBottom.validate(placeHolder)) {
+		if(lTop.validate(placeHolder) && rTop.validate(placeHolder) && rBottom.validate(placeHolder) && lBottom.validate(placeHolder)) {
 			return true
 		}
 		return false
@@ -805,11 +821,10 @@ class Rectangle4Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 		return elemBorders.intersect(elem2Borders)
 	}
 
-	override def toString = s"\n{ Rectangle4Mask => left: ($left), top: ($top), right: ($right), bottom: ($bottom) }"
+	override def toString = s"\n{ Rectangle4Mask => \n\tleft: ($left), \n\ttop: ($top), \n\tright: ($right), \n\tbottom: ($bottom) }"
 }
 
-object Rectangle4Mask {
-	type RectMaskInt = RectangleMask[Rectangle[Int]]
+object Rectangle4Mask extends AppType {
 	implicit def apply(left: RectMaskInt, top: RectMaskInt, right: RectMaskInt, bottom: RectMaskInt) = init(left, top, right, bottom)
 	def init(left: RectMaskInt, top: RectMaskInt, right: RectMaskInt, bottom: RectMaskInt): Rectangle4Mask[RectMaskInt] = new Rectangle4Mask[RectMaskInt](left, top, right, bottom)
 }
