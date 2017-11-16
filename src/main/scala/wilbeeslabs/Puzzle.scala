@@ -154,6 +154,13 @@ trait AppInitializer extends AppType {
 											elemTop.intersectTop(elemRight).isEmpty &&
 											elemRight.intersectRight(elemBottom).isEmpty &&
 											elemBottom.intersectBottom(elemLeft).isEmpty) {
+
+											// val matrixDimension = 4//getMaxPowerOf2(rectangleList.length)
+											// var matrix = CMatrix[RectInt, Int](matrixDimension, matrixDimension)
+											// matrix.fill(rectangleList, Rectangle.defaultPlaceHolder)
+											// if(matrix.validate(Rectangle.defaultPlaceHolder)) {
+											// 	resultSet += matrix
+											// }
 											var rectangle4Mask = Rectangle4Mask(elemLeft, elemTop, elemRight, elemBottom)
 											if(rectangle4Mask.validate(Rectangle.defaultPlaceHolder)) {
 												resultSet += rectangle4Mask
@@ -169,17 +176,13 @@ trait AppInitializer extends AppType {
 			return resultSet
 		}
 		def showRectangleResultSet(list: Iterable[Rect4IntMask]): Unit = {
-			if(list.isEmpty) {
-				println("Cannot find possible rectangle combinations, please check again possible options / input data set")
+			var list = List(CMatrix[RectInt, Int](3, 3))
+			if(null == list || list.isEmpty) {
+				println("Cannot find possible rectangle combinations, please check possible matrix options / input data set")
 				return
 			}
-			println(s"\nProgram total report: (${list.size}) possible combination(s) successfully found:")
-			var count = 1
 			list.map(elem => {
-				println("-" * 37 + s" (${count}) " + "-" * 37)
 				println(elem)
-				println("-" * 80)
-				count += 1
 			})
 		}
 
@@ -291,6 +294,7 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int
  	def *(value: S): Unit 					= multiply(this.matrix, value)
  	def +(matrix2: CMatrix[T, S]): Unit 	= add(this.matrix, matrix2.matrix)
  	def -(matrix2: CMatrix[T, S]): Unit 	= substract(this.matrix, matrix2.matrix)
+
  	def update(matrix2: Matrix): Unit 	= this.matrix = matrix2
  	def fill(value: T): Unit = this.foreach( (t: T) => { value } )
 
@@ -501,8 +505,7 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int
 		}
 	}
 
-  	// override methods
-	override def toString = "\n" + this.matrix.map {_.map{"\t" + _}.reduceLeft(_ + _) + "\n"}.reduceLeft(_ + _)
+	override def toString = "\n" + this.matrix.map {_.map{_ + " "}.reduceLeft(_ + _) + "\n"}.reduceLeft(_ + _)
 }
 
 object CMatrix {
@@ -532,6 +535,7 @@ class Rectangle[T >: Int <: Int] (
 	def rTop: T 	= rightTop
 	def rBottom: T 	= rightBottom
 	def ID: String 	= uuid
+	def debug: String = s"\n{ Rectangle => ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 
  	override def *(rectangle2: Rectangle[T]) 	= multiply(this, rectangle2)
  	override def *(value: Int)					= multiply(this, value)
@@ -603,17 +607,17 @@ class Rectangle[T >: Int <: Int] (
 		)
  	}
 
- 	// override methods
 	// override def compareTo(rectangle: Rectangle[T]) = {
 	//     val lBottom = this.leftBottom compareTo rectangle.leftBottom
 	//     if (lBottom != 0) lBottom
 	//     else this.leftTop compareTo rectangle.leftTop
  	// }
-	override def toString = s"\n{ Rectangle => ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
+	override def toString = s"\n$lTop $rTop $lBottom $rBottom"
 }
 
 object Rectangle extends AppType {
 	private val placeHolder = new Rectangle[Int](0, 0, 0, 0)
+
 	implicit def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
 	def defaultPlaceHolder: RectInt = placeHolder
@@ -695,11 +699,9 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 			return null
 		return rectShape.ID
 	}
-	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = {
-		return elemBorders.intersect(elem2Borders)
-	}
+	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = elemBorders.intersect(elem2Borders)
 
-	override def toString = s"\n{ RectangleMask => \nleftTop: ($lTop), \nrightTop: ($rTop), \nrightBottom: ($rBottom), \nleftBottom: ($lBottom) }"
+	override def toString = s"\n{ RectangleMask => \nleftTop: ($lTop), \nrightTop: ($rTop), \nleftBottom: ($lBottom), \nrightBottom: ($rBottom) }"
 }
 
 object RectangleMask extends AppType {
@@ -745,16 +747,13 @@ class Rectangle2Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	}
 
 	private def getShapeID(shape: Rectangle[Int]): String = {
-		if (null == shape) {
+		if (null == shape)
 			return null
-		}
 		return shape.ID
 	}
-	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = {
-		return elemBorders.intersect(elem2Borders)
-	}
+	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = elemBorders.intersect(elem2Borders)
 
-	override def toString = s"\n{ Rectangle2Mask => \n\tleftTop: ($lTop), \n\trightTop: ($rTop), \n\trightBottom: ($rBottom), \n\tleftBottom: ($lBottom) }"
+	override def toString = s"\n{ Rectangle2Mask => \n\tleftTop: ($lTop), \n\trightTop: ($rTop), \n\tleftBottom: ($lBottom), \n\trightBottom: ($rBottom) }"
 }
 
 object Rectangle2Mask extends AppType {
@@ -805,21 +804,20 @@ class Rectangle4Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
 	}
 
 	def validate(placeHolder: Rectangle[Int] = null): Boolean = {
-		if(lTop.validate(placeHolder) && rTop.validate(placeHolder) && rBottom.validate(placeHolder) && lBottom.validate(placeHolder)) {
+		if(lTop.validate(placeHolder) &&
+			rTop.validate(placeHolder) &&
+			rBottom.validate(placeHolder) &&
+			lBottom.validate(placeHolder))
 			return true
-		}
 		return false
 	}
 
 	private def getShapeID(shape: Rectangle[Int]): String = {
-		if (null == shape) {
+		if (null == shape)
 			return null
-		}
 		return shape.ID
 	}
-	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = {
-		return elemBorders.intersect(elem2Borders)
-	}
+	private def intersectMask[A] (elemBorders: Set[A], elem2Borders: Set[A]): Set[A] = elemBorders.intersect(elem2Borders)
 
 	override def toString = s"\n{ Rectangle4Mask => \n\tleft: ($left), \n\ttop: ($top), \n\tright: ($right), \n\tbottom: ($bottom) }"
 }
