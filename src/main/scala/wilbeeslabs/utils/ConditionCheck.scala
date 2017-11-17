@@ -1,4 +1,4 @@
-package com.wildbeeslabs.utils
+package wildbeeslabs.utils
 
 object ConditionCheck {
 
