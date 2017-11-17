@@ -4,18 +4,17 @@ import wildbeeslabs.traits.AppType
 import wildbeeslabs.classes.Rectangle._
 import wildbeeslabs.classes.CMatrix._
 
-class RectangleMask[T >: Null <: Rectangle[Int]] (
+class RectangleMask[T <: Rectangle[Int]] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
 	private var rightBottom: T) extends ShapeMask[RectangleMask[T], String] with AppType {
 
-	def this() 		= this(null, null, null, null)
 	def lBottom: T 	= leftBottom
 	def lTop: T 	= leftTop
 	def rTop: T 	= rightTop
 	def rBottom: T 	= rightBottom
-	def hasPlaceholder(placeHolder: T = null): Boolean = this.borderSet.contains(getShapeID[RectInt, Int](placeHolder))
+	def hasPlaceholder(placeHolder: T): Boolean = this.borderSet.contains(getShapeID[RectInt, Int](placeHolder))
 
 	def cValue: Int = (leftTop.rBottom + rightTop.lBottom + rightBottom.lTop + leftBottom.rTop)
 	def lValue: Int = (leftTop.lBottom + leftBottom.lTop)

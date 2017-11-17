@@ -5,13 +5,12 @@ import wildbeeslabs.classes.Rectangle._
 import wildbeeslabs.classes.RectangleMask._
 import wildbeeslabs.classes.CMatrix._
 
-class Rectangle2Mask[T >: Null <: RectangleMask[Rectangle[Int]]] (
+class Rectangle2Mask[T <: RectangleMask[Rectangle[Int]]] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
 	private var rightBottom: T) extends ShapeMask[Rectangle2Mask[T], String] with AppType {
 
-	def this() 					= this(null, null, null, null)
 	def left: RectIntMask 		= RectangleMask(leftBottom.lTop, leftBottom.rTop, leftTop.lBottom, leftTop.rBottom)
 	def top: RectIntMask 		= RectangleMask(leftTop.rBottom, leftTop.rTop, rightTop.lTop, rightTop.lBottom)
 	def right: RectIntMask 		= RectangleMask(rightBottom.lTop, rightTop.lBottom, rightTop.rBottom, rightBottom.rTop)
