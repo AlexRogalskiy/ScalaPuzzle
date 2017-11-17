@@ -82,17 +82,18 @@ trait AppInitializer extends AppType {
 	private val defaultFileRecordFormat = "\\d{1}\\s+\\d{1}\\s+\\d{1}\\s+\\d{1}"
 	private val defaultFileName = "default.txt"
 
-	def runPuzzleTask(map: OptionMap): Unit = {
+	def runPuzzleTask(optionMap: OptionMap): Unit = {
 		def createRectangleMatrix(): CMatrix[RectInt, Int] = {
 			var inputDataList = loadDataFromFile[List[Int]] (
-								map.getOrElse('file, defaultFileName).toString,
+								optionMap.getOrElse('file, defaultFileName).toString,
 								(str: String) => { str.trim.matches(defaultFileRecordFormat) },
 								(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
 			)
+			if(inputDataList.isEmpty) return null
 			var rectangleList= inputDataList.map(elem => Rectangle(elem(2), elem(0), elem(1), elem(3)))
 			val matrixDimension = getMaxPowerOf2(rectangleList.length)
 			var resultSet = CMatrix[RectInt, Int](matrixDimension, matrixDimension)
-			resultSet.fill(rectangleList, Rectangle.emptyRectangle/*null*/)
+			resultSet.fill(rectangleList, Rectangle.emptyRectangle)
 			return resultSet
 		}
 		def generateRectangleCombinations(matrix: CMatrix[RectInt, Int]): Iterable[RectIntMask] = {
@@ -100,7 +101,7 @@ trait AppInitializer extends AppType {
 			if(null == matrix) {
 				return resultSet
 			}
-			var rectangleCombinations = matrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => (r != Rectangle.emptyRectangle)/*(null != r) // (r != Rectangle.emptyRectangle)*/)
+			var rectangleCombinations = matrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => (Rectangle.emptyRectangle != r))
 			rectangleCombinations.map( elem => {
 				elem.permutations.foreach { row =>
 					var rectangleMask = RectangleMask(row(3), row(0), row(1), row(2))
@@ -141,57 +142,8 @@ trait AppInitializer extends AppType {
 					else if(elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) 	buffRight += elem2
 					else if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 		buffTop += elem2
 					else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	buffBottom += elem2
-					// if(elem.lTop == elem2.rBottom && elem2.intersect(elem).size == 1) 	buffTopLeft += elem2
-					// else if(elem.rTop == elem2.lBottom && elem2.intersect(elem).size == 1) 	buffTopRight += elem2
-					// else if(elem.lBottom == elem2.rTop && elem2.intersect(elem).size == 1) 	buffBottomLeft += elem2
-					// else if(elem.rBottom == elem2.lTop && elem2.intersect(elem).size == 1) 	buffBottomRight += elem2
-					// if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) buffLeft += elem2
 				})
 				if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
-					//println(buffTopLeft.length + " : " + buffTopRight.length + " : " + buffBottomLeft.length + " : " + buffBottomRight.length + " : " + buffLeft.length)
-					//var buffLeftRight = new ListBuffer[Rect2IntMask]()
-					// buffBottomLeft.map(elemBottomLeft => {
-					//  	buffTopLeft.map(elemTopLeft => {
-					//  		if(elemTopLeft.intersect(elemBottomLeft).isEmpty) {
-					// 			buffLeft.map(elemLeft => {
-					// 				if(elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
-					// 				 	count += 1
-					// 				}
-					// 			})
-					// 		}
-					//  		// buffBottomLeft.map(elemBottomLeft => {
-					//  		// 	if(elemTopLeft.intersect(elemBottomLeft).isEmpty && elemLeft.intersectBottom(elemTopLeft).isEmpty && elemLeft.intersectTop(elemBottomLeft).isEmpty) {
-					// 			// 	println("ok")
-					// 			// }
-					//  		// })
-					//  	})
-					// })
-
-					//println(count)
-					// var buffLeftRight = new ListBuffer[Rect2IntMask]()
-					// buffLeft.map(elemLeft => {
-					//  	buffRight.map(elemRight => {
-					// 		if(elemLeft.intersect(elemRight).isEmpty) {
-					// 			buffLeftRight += Rectangle2Mask(elemLeft, elemRight)
-					// 		}
-					//  	})
-					// })
-					// var buffTopBottom = new ListBuffer[Rect2IntMask]()
-					// buffTop.map(elemTop => {
-					//  	buffBottom.map(elemBottom => {
-					// 		if(elemTop.intersect(elemBottom).isEmpty) {
-					// 			buffTopBottom += Rectangle2Mask(elemTop, elemBottom)
-					// 		}
-					//  	})
-					// })
-					// buffLeftRight.map(elemLeftRight => {
-					// 	buffTopBottom.map(elemTopBottom => {
-					// 		if(elemLeftRight.intersectCenter(elemTopBottom).size == 4) {
-					// 			//println(elemLeftRight + " : " + elemTopBottom)
-					// 			count += 1
-					// 		}
-					// 	})
-					// })
 					buffLeft.map(elemLeft => {
 						buffRight.map(elemRight => {
 							if(elemLeft.intersect(elemRight, (str: String) => str != Rectangle.emptyRectangle.ID).isEmpty) {
@@ -203,12 +155,6 @@ trait AppInitializer extends AppType {
 											elemRight.intersectRight(elemBottom).isEmpty &&
 											elemBottom.intersectBottom(elemLeft).isEmpty) {
 
-											// val matrixDimension = 4//getMaxPowerOf2(rectangleList.length)
-											// var matrix = CMatrix[RectInt, Int](matrixDimension, matrixDimension)
-											// matrix.fill(rectangleList, Rectangle.emptyRectangle)
-											// if(matrix.validate(Rectangle.emptyRectangle)) {
-											// 	resultSet += matrix
-											// }
 											var rectangle4Mask = Rectangle4Mask(elemLeft, elemTop, elemRight, elemBottom)
 											if(rectangle4Mask.validate(Rectangle.emptyRectangle)) {
 												resultSet += rectangle4Mask
@@ -224,13 +170,12 @@ trait AppInitializer extends AppType {
 			return resultSet
 		}
 		def showRectangleResultSet(list: Iterable[RectIntMask4]): Unit = {
-			//var list = List(CMatrix[RectInt, Int](3, 3))
 			if(null == list || list.isEmpty) {
-				println("Cannot find possible rectangle combinations, please check possible matrix options / input data set")
+				println("\nCannot find possible rectangle combinations, please check possible matrix options / input data set\n")
 				return
 			}
 			list.map(elem => {
-				println(elem.toMatrix)
+				println(elem.toMatrix.toStringFormat() { (r: RectInt) => (!Rectangle.typeList.contains(r)) })
 			})
 		}
 
@@ -238,16 +183,6 @@ trait AppInitializer extends AppType {
 		var rectCombiList = generateRectangleCombinations(rectangleMatrix)
 		var rectPermList = generateRectanglePermutations(rectCombiList)
 		showRectangleResultSet(rectPermList)
-	// var bufferTop = new ListBuffer[Rect2IntMask]()
-	// var bufferBottom = new ListBuffer[Rect2IntMask]()
-	// 	buffer.map(elem => {
-	// 		buffer.map(elem2 => {
-	// 			if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 			bufferTop += elem2
-	// 			else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	bufferBottom += elem2
-	// 		})
-	// 	})
-	// 	println(bufferTop.length + " : " + bufferBottom.length)
-		//println(rectangleMaskSet.length)
     }
 
     def nextOption(map: OptionMap, list: List[String]): OptionMap = {
@@ -277,7 +212,7 @@ trait AppInitializer extends AppType {
 	def loadDataFromFile[A] (fileName: String, predicat: (String) => Boolean, process: (String) => A): List[A] = {
 		var result = new ListBuffer[A]()
 		var file = new java.io.File(fileName)
-		if(!file.exists() && !file.isFile()) {
+		if(!file.exists() || !file.isFile()) {
 			return Nil
 		}
 		for (line <- Source.fromFile(file)(decoder).getLines) {
@@ -311,7 +246,7 @@ trait AppInitializer extends AppType {
     }
 }
 
-class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int = 1) {
+class CMatrix[T >: Null <: Shape[T, S], S <: Any] (numRows: Int = 1, numCols: Int = 1) {
 	import utils.ConditionCheck._
 	import scala.collection.mutable.ListBuffer
 	/* Matrix type aliases */
@@ -321,13 +256,14 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int
 	private var matrix: Matrix = init(numRows, numCols) { (i: Int, j: Int) => { null } }
 
 	/* public methods */
-	def apply(i: Int, j: Int) = this.matrix(i)(j)
-	def this() = this(0, 0)
-	def T: Unit = transpose(this.matrix)
-	def rowCount: Int = this.matrix.length
- 	def colCount: Int = this.matrix.head.length
- 	def size: Int = rowCount * colCount
- 	def isSquare: Boolean = (rowCount == colCount)
+	def apply(i: Int, j: Int) 	= this.matrix(i)(j)
+	def this() 					= this(0, 0)
+	def T: Unit 				= transpose(this.matrix)
+	def rowCount: Int 			= this.matrix.length
+ 	def colCount: Int 			= this.matrix.head.length
+ 	def size: Int 				= rowCount * colCount
+ 	def isSquare: Boolean 		= (rowCount == colCount)
+
  	def minor(i: Int, j: Int): Unit = minorMatrix(matrix, i, j)
  	def beside(matrix2: CMatrix[T, S]): Unit = this.matrix.zip( matrix2.matrix ).map{ t:(Row, Row) => t._1 ::: t._2 }
   	def above(matrix2: CMatrix[T, S]): Unit = this.matrix ::: matrix2.matrix
@@ -338,16 +274,14 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int
   	def permutate(rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = permutateMatrix(this.matrix, rowFilter, elemPreFilter, elemPostFilter)
   	def combinate(size: Int, rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = combinateMatrix(this.matrix, size, rowFilter, elemPreFilter, elemPostFilter)
  	
+	def *(value: S): Unit 					= multiply(this.matrix, value)
  	def *(matrix2: CMatrix[T, S]): Unit 	= multiplyMatrices(this.matrix, matrix2.matrix)
- 	def *(value: S): Unit 					= multiply(this.matrix, value)
  	def +(matrix2: CMatrix[T, S]): Unit 	= add(this.matrix, matrix2.matrix)
  	def -(matrix2: CMatrix[T, S]): Unit 	= substract(this.matrix, matrix2.matrix)
 
  	def update(matrix2: Matrix): Unit 	= this.matrix = matrix2
  	def fill(value: T): Unit = this.foreach( (t: T) => { value } )
-	def fill(f: (Int, Int) => T): Unit = {
-		this.matrix = this.init(rowCount, colCount) { f(_, _) }
-	}
+	def fill(f: (Int, Int) => T): Unit = this.matrix = this.init(rowCount, colCount) { f(_, _) }
 	def fill(list: List[T], placeHolder: T = null): Unit = {
 		def insertPlaceHolder(buffer: ListBuffer[T], delta: Int, value: T): Unit = {
 			var c = 0
@@ -358,7 +292,7 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int
 		}
 		var result = new ListBuffer[T]()
 		if (this.size > list.length) {
-			var delta = (this.size - list.length) / 2
+			var delta = (this.size - list.length + 1) / 2
 			insertPlaceHolder(result, delta / 2, placeHolder)
 			var (left, right) = list.splitAt(colCount - delta)
 			left.map(result += _)
@@ -554,6 +488,9 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any](numRows: Int = 1, numCols: Int
 		}
 	}
 
+	def toStringFormat(colDelim: String = " ", rowDelim: String = "\n") (f: (T) => Boolean = (T) => true): String = {
+		return "\n" + this.matrix.map(_.filter(f(_)).map(_.toStringFormat(colDelim) + rowDelim).reduceLeft(_ + _)).reduceLeft(_ + _)
+	}
 	override def toString = "\n" + this.matrix.map {_.map{_ + " "}.reduceLeft(_ + _)}.reduceLeft(_ + _) + "\n"
 }
 
@@ -570,13 +507,14 @@ abstract class Shape[T <: Shape[T, S], S] {
 	def +(shape2: T): T
  	def -(shape2: T): T
  	def filter(shapes: List[T]) (f: (T) => Boolean): List[T]
+ 	def toStringFormat(delim: String = " "): String
 }
 
 class Rectangle[T >: Int <: Int] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
-	private var rightBottom: T) extends Shape[Rectangle[T], Int] { //extends Comparable[Rectangle];
+	private var rightBottom: T) extends Shape[Rectangle[T], Int] {
 
 	private var placeHolder: Boolean = false
 
@@ -659,12 +597,8 @@ class Rectangle[T >: Int <: Int] (
 		)
  	}
 
-	// override def compareTo(rectangle: Rectangle[T]) = {
-	//     val lBottom = this.leftBottom compareTo rectangle.leftBottom
-	//     if (lBottom != 0) lBottom
-	//     else this.leftTop compareTo rectangle.leftTop
- 	// }
-	override def toString = s"\n$lTop $rTop $lBottom $rBottom"
+ 	override def toStringFormat(delim: String = " "): String = s"$lTop$delim$rTop$delim$lBottom$delim$rBottom"
+	override def toString = s"$lTop $rTop $lBottom $rBottom"
 }
 
 object Rectangle extends AppType {
@@ -676,6 +610,7 @@ object Rectangle extends AppType {
 	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
 	def pruneRectangle: RectInt = defaultPruneRectangle
 	def emptyRectangle: RectInt = defaultEmptyRectangle
+	def typeList: List[RectInt] = List(defaultPruneRectangle, defaultEmptyRectangle)
 }
 
 abstract class ShapeMask[T <: ShapeMask[T, S], S <: Any] {
@@ -709,7 +644,7 @@ class RectangleMask[T >: Null <: Rectangle[Int]] (
 	def lTop: T 	= leftTop
 	def rTop: T 	= rightTop
 	def rBottom: T 	= rightBottom
-	def hasPlaceholder(placeHolder: T = null): Boolean = this.borderSet.contains(getShapeID[Rectangle[Int], Int](placeHolder))
+	def hasPlaceholder(placeHolder: T = null): Boolean = this.borderSet.contains(getShapeID[RectInt, Int](placeHolder))
 
 	def cValue: Int = (leftTop.rBottom + rightTop.lBottom + rightBottom.lTop + leftBottom.rTop)
 	def lValue: Int = (leftTop.lBottom + leftBottom.lTop)
