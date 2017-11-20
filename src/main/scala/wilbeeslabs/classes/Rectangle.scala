@@ -34,15 +34,15 @@ import wildbeeslabs.traits.AppType
  * @since 2017-11-16
  * param <T>
  */
-class Rectangle[T >: Int <: Int] (
+class Rectangle[T: Numeric] (
 	private var leftBottom: T,
 	private var leftTop: T,
 	private var rightTop: T,
-	private var rightBottom: T) extends Shape[Rectangle[T], Int] {
-
+	private var rightBottom: T) extends Shape[Rectangle[T], T] {
+	
+	import Numeric.Implicits._
 	private var placeHolder: Boolean = false
 
-	def this() 		= this(0, 0, 0, 0)
 	def lBottom: T 	= leftBottom
 	def lTop: T 	= leftTop
 	def rTop: T 	= rightTop
@@ -52,7 +52,7 @@ class Rectangle[T >: Int <: Int] (
 	def debug: String = s"\n{ Rectangle => ID: ($ID), leftTop: ($lTop), rightTop: ($rTop), rightBottom: ($rBottom), leftBottom: ($lBottom) }"
 
  	override def *(rectangle2: Rectangle[T]) 	= multiply(this, rectangle2)
- 	override def *(value: Int)					= multiply(this, value)
+ 	override def *(value: T)					= multiply(this, value)
  	override def +(rectangle2: Rectangle[T]) 	= add(this, rectangle2)
  	override def -(rectangle2: Rectangle[T]) 	= substract(this, rectangle2)
 	override def sum: T							= (this.lBottom + this.lTop + this.rTop + this.rBottom)
@@ -68,7 +68,7 @@ class Rectangle[T >: Int <: Int] (
 		this.rightBottom 	*= rectangle2.rBottom
 	}
 
-	private def multiply(value: Int): Unit = {
+	private def multiply(value: T): Unit = {
 		this.leftBottom 	*= value
 		this.leftTop 		*= value
 		this.rightTop 		*= value
@@ -97,7 +97,7 @@ class Rectangle[T >: Int <: Int] (
 		)
 	}
 
-	private def multiply(rectangle1: Rectangle[T], value: Int): Rectangle[T] = {
+	private def multiply(rectangle1: Rectangle[T], value: T): Rectangle[T] = {
 		new Rectangle[T](rectangle1.lBottom * value,
 					 	rectangle1.lTop 	* value,
 					  	rectangle1.rTop 	* value,
@@ -131,7 +131,7 @@ object Rectangle extends AppType {
 	private val defaultEmptyRectangle = new Rectangle[Int](0, 0, 0, 0)
 
 	implicit def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
-	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int](leftBottom, leftTop, rightTop, rightBottom)
+	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int] (leftBottom, leftTop, rightTop, rightBottom)
 	def pruneRectangle: RectInt = defaultPruneRectangle
 	def emptyRectangle: RectInt = defaultEmptyRectangle
 	def typeList: List[RectInt] = List(defaultPruneRectangle, defaultEmptyRectangle)

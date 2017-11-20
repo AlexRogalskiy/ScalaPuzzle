@@ -25,18 +25,14 @@ package wildbeeslabs.utils
 
 /**
  *
- * Condition Check object
+ * Condition Check class
  *
  * @author Alex
  * @version 1.0.0
  * @since 2017-11-16
  */
-object ConditionCheck {
-
-	private var checkPreconditions: Boolean = false
-	private var checkPostconditions: Boolean = false
-
-	def requireEquals[T] (a: => T, b: => T): Unit = {
+class ConditionCheck {
+	def requireEquals[T] (a: => T, b: => T, checkPreconditions: Boolean = true): Unit = {
 		if(checkPreconditions) {
 			val a_, b_ = (a, b)
 			if(a_ != b_) {
@@ -45,7 +41,7 @@ object ConditionCheck {
 		}
 	}
   
-	def ensure[T] (postcondition: (T) => Boolean, result: T): T = {
+	def ensure[T] (postcondition: (T) => Boolean, result: T, checkPostconditions: Boolean = true): T = {
 		if(checkPostconditions) {
 			if(!postcondition(result)) {
 				throw new AssertionError("Postcondition failed for result = " + result)
@@ -53,4 +49,13 @@ object ConditionCheck {
 		}
 		return result
 	}
+}
+
+object ConditionCheck extends ConditionCheck {
+
+	private val checkPreconditions: Boolean = false
+	private val checkPostconditions: Boolean = false
+
+	def requireEquals[T] (a: => T, b: => T): Unit = requireEquals[T] (a, b, checkPreconditions)
+	def ensure[T] (postcondition: (T) => Boolean, result: T): T = ensure[T] (postcondition, result, checkPostconditions)
 }
