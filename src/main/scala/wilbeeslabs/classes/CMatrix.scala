@@ -36,7 +36,7 @@ import scala.collection.mutable.ListBuffer
  * param <T>
  * param <S>
  */
-class CMatrix[T >: Null <: Shape[T, S], S <: Any] (numRows: Int = 1, numCols: Int = 1) {
+class CMatrix[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int = 1, numCols: Int = 1) {
 	/* Matrix type aliases */
 	type Row = List[T]
 	type Matrix = List[Row]
@@ -283,5 +283,5 @@ class CMatrix[T >: Null <: Shape[T, S], S <: Any] (numRows: Int = 1, numCols: In
 }
 
 object CMatrix {
-	implicit def apply[T >: Null <: Shape[T, S], S <: Any](numRows: Int, numCols: Int): CMatrix[T, S] = new CMatrix[T, S](numRows, numCols)
+	implicit def apply[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int, numCols: Int): CMatrix[T, S] = new CMatrix[T, S](numRows, numCols)
 }

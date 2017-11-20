@@ -33,7 +33,7 @@ package wildbeeslabs.classes
  * param <T>
  * param <S>
  */
-abstract class Shape[T <: Shape[T, S], S] {
+abstract class Shape[T <: Shape[T, S], S: Numeric] {
 	protected val uuid: String = java.util.UUID.randomUUID.toString
 	def ID: String 	= uuid
 	def sum: S

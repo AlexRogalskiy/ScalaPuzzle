@@ -23,6 +23,8 @@
  */
 package wildbeeslabs.classes
 
+import wildbeeslabs.classes.CMatrix._
+
 /**
  *
  * Abstract Shape Mask class
@@ -33,15 +35,16 @@ package wildbeeslabs.classes
  * param <T>
  * param <S>
  */
-abstract class ShapeMask[T <: ShapeMask[T, S], S <: Any] {
+abstract class ShapeMask[T <: ShapeMask[T, S], S >: Null <: Any] {
  	def diff(shapeMask2: T, f: (S) => Boolean = (S) => true): Set[S]
  	def intersect(shapeMask2: T, f: (S) => Boolean = (S) => true): Set[S]
- 	def getShapeID[A >: Null <: Shape[A, B], B <: Any](rectShape: A): String = {
+ 	def getShapeID[A >: Null <: Shape[A, B], B: Numeric] (rectShape: A): S = {
 		rectShape match {
 			case null => null
-			case rect: Shape[A, B] => rect.ID
+			case rect: Shape[A, B] => rect.ID.asInstanceOf[S]
 		}
  	}
+	def toMatrix: CMatrix[_, _]
 
  	protected def tuple2ToSet[A] (t: (A, A)): Set[A] 		= Set(t._1, t._2)
  	protected def tuple3ToSet[A] (t: (A, A, A)): Set[A] 	= Set(t._1, t._2, t._3)

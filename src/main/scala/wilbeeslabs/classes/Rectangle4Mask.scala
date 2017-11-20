@@ -95,10 +95,16 @@ class Rectangle4Mask[T <: RectangleMask[Rectangle[Int]]] (
 		return false
 	}
 
-	def toMatrix[A >: Int <: Int]: CMatrix[Rectangle[A], A] = {
-		var matrix = CMatrix[Rectangle[A], A](left.topBorderSet.size + right.topBorderSet.size, top.leftBorderSet.size + bottom.leftBorderSet.size)
-		matrix.fill(tuple2ToList(lTop.topBorder) ::: tuple2ToList(rTop.topBorder) ::: tuple2ToList(lTop.bottomBorder) ::: tuple2ToList(rTop.bottomBorder) ::: 
-			tuple2ToList(lBottom.topBorder) ::: tuple2ToList(rBottom.topBorder) ::: tuple2ToList(lBottom.bottomBorder) ::: tuple2ToList(rBottom.bottomBorder))
+	override def toMatrix: CMatrix[RectInt, Int] = {
+		var matrix = CMatrix[RectInt, Int](left.topBorderSet.size + right.topBorderSet.size, top.leftBorderSet.size + bottom.leftBorderSet.size)
+		matrix.fill(tuple2ToList(lTop.topBorder) :::
+					tuple2ToList(rTop.topBorder) :::
+					tuple2ToList(lTop.bottomBorder) :::
+					tuple2ToList(rTop.bottomBorder) ::: 
+					tuple2ToList(lBottom.topBorder) :::
+					tuple2ToList(rBottom.topBorder) :::
+					tuple2ToList(lBottom.bottomBorder) :::
+					tuple2ToList(rBottom.bottomBorder))
 		return matrix
 	}
 

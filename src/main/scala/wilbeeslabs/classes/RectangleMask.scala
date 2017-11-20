@@ -101,8 +101,8 @@ class RectangleMask[T <: Rectangle[Int]] (
 		return isFullValid()
 	}
 
-	def toMatrix[A >: Int <: Int]: CMatrix[Rectangle[A], A] = {
-		var matrix = CMatrix[Rectangle[A], A](topBorderSet.size, leftBorderSet.size)
+	override def toMatrix: CMatrix[RectInt, Int] = {
+		var matrix = CMatrix[RectInt, Int](topBorderSet.size, leftBorderSet.size)
 		matrix.fill(tuple4ToList[T](this.border))
 		return matrix
 	}

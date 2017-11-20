@@ -126,9 +126,9 @@ class Rectangle[T: Numeric] (
 } 
 
 object Rectangle extends AppType {
-	private val defaultPruneRectangle = new Rectangle[Int](0, 0, 0, 0)
+	private val defaultPruneRectangle: RectInt = new Rectangle[Int](0, 0, 0, 0)
 	defaultPruneRectangle.setPlaceHolder(true)
-	private val defaultEmptyRectangle = new Rectangle[Int](0, 0, 0, 0)
+	private val defaultEmptyRectangle: RectInt = new Rectangle[Int](0, 0, 0, 0)
 
 	implicit def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int] (leftBottom, leftTop, rightTop, rightBottom)
