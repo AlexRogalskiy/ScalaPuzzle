@@ -44,7 +44,7 @@ abstract class ShapeMask[T <: ShapeMask[T, S], S >: Null <: Any] {
 			case rect: Shape[A, B] => rect.ID.asInstanceOf[S]
 		}
  	}
-	def toMatrix: CMatrix[_, _]
+	def toMatrix[A >: Null <: Shape[A, B], B: Numeric]: CMatrix[A, B]
 
  	protected def tuple2ToSet[A] (t: (A, A)): Set[A] 		= Set(t._1, t._2)
  	protected def tuple3ToSet[A] (t: (A, A, A)): Set[A] 	= Set(t._1, t._2, t._3)

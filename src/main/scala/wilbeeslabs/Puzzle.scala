@@ -14,14 +14,14 @@ object Puzzle extends AppInitializer {
 
 		Usage: run --file filename
 
-	>>> Copyright by wildbeeslabs (C) <<<
+	>>> Copyright by wildbeeslabs (с) <<<
 	"""
 	def main(args: Array[String]): Unit = {
     	if (args.length == 0) {
 	        println(usage)
-	        return//sys.exit(0)
+	        return
 	    }
-    	val options = nextOption(Map().withDefaultValue("Not found"), args.to[List])
+    	val options = nextOption(Map().withDefaultValue("not found"), args.to[List])
     	runPuzzleTask(options)
     }
 }
@@ -40,14 +40,26 @@ trait AppInitializer extends AppType {
 	private val defaultFileName = "default.txt"
 
 	def runPuzzleTask(optionMap: OptionMap): Unit = {
-		def createRectangleMatrix(): CMatrix[RectInt, Int] = {
-			var inputDataList = loadDataFromFile[List[Int]] (
-								optionMap.getOrElse('file, defaultFileName).toString,
-								(str: String) => { str.trim.matches(defaultFileRecordFormat) },
-								(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList }
-			)
-			if(inputDataList.isEmpty) return null
-			var rectangleList= inputDataList.map(elem => Rectangle(elem(2), elem(0), elem(1), elem(3)))
+		val combinationGroupSize: Int = 4
+		def loadRectangleData[A] (): Iterable[A] = {
+			try {
+				var inputDataList = loadDataFromFile[A] (
+										optionMap.getOrElse('file, defaultFileName).toString,
+										(str: String) => { str.trim.matches(defaultFileRecordFormat) },
+										(str: String) => { str.split("\\s+").map((value) => toInt(value.trim).getOrElse(0)).toList.asInstanceOf[A] }
+									)
+				return inputDataList
+			} catch {
+				case ex: Exception => {
+					println(s"\n\nERROR: cannot process load data operation: message = (${ex.getMessage()})\n\n")
+					sys.exit(0)
+				}
+			}
+			return null
+		}
+		def createRectangleMatrix[A <% List[Int]] (data: Iterable[A]): CMatrix[RectInt, Int] = {
+			if(null == data || data.isEmpty) return null
+			var rectangleList = data.map(elem => Rectangle(elem(2), elem(0), elem(1), elem(3))).to[List]
 			val matrixDimension = getMaxPowerOf2(rectangleList.length)
 			var resultSet = CMatrix[RectInt, Int](matrixDimension, matrixDimension)
 			resultSet.fill(rectangleList, Rectangle.emptyRectangle)
@@ -58,12 +70,14 @@ trait AppInitializer extends AppType {
 			if(null == matrix) {
 				return resultSet
 			}
-			var rectangleCombinations = matrix.combinate(4, (r: List[RectInt]) => true, (r: RectInt) => (Rectangle.emptyRectangle != r))
+			var rectangleCombinations = matrix.combine(combinationGroupSize, (r: List[RectInt]) => true, (r: RectInt) => (Rectangle.emptyRectangle != r))
 			rectangleCombinations.map( elem => {
-				elem.permutations.foreach { row =>
-					var rectangleMask = RectangleMask(row(3), row(0), row(1), row(2))
-					if(rectangleMask.validate(Rectangle.emptyRectangle)) {
-						resultSet += rectangleMask
+				elem.permutations.foreach {
+					row => {
+						var rectangleMask = RectangleMask(row(3), row(0), row(1), row(2))
+						if(rectangleMask.validate(Rectangle.emptyRectangle)) {
+							resultSet += rectangleMask
+						}
 					}
 				}
 			})
@@ -92,38 +106,41 @@ trait AppInitializer extends AppType {
 				return !buffer.isEmpty
 			}
 
-			list.filter(!_.hasPlaceholder(Rectangle.emptyRectangle)).map( elem => {
-				clearBuffers()
-				list.map( elem2 => {
-					if(elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) 			buffLeft += elem2
-					else if(elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) 	buffRight += elem2
-					else if(elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 		buffTop += elem2
-					else if(elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty) 	buffBottom += elem2
-				})
-				if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
-					buffLeft.map(elemLeft => {
-						buffRight.map(elemRight => {
-							if(elemLeft.intersect(elemRight, (str: String) => str != Rectangle.emptyRectangle.ID).isEmpty) {
-								buffTop.map(elemTop => {
-									buffBottom.map(elemBottom => {
-										if(elemTop.intersect(elemBottom, (str: String) => str != Rectangle.emptyRectangle.ID).isEmpty &&
-											elemLeft.intersectLeft(elemTop).isEmpty &&
-											elemTop.intersectTop(elemRight).isEmpty &&
-											elemRight.intersectRight(elemBottom).isEmpty &&
-											elemBottom.intersectBottom(elemLeft).isEmpty) {
-
-											var rectangle4Mask = Rectangle4Mask(elemLeft, elemTop, elemRight, elemBottom)
-											if(rectangle4Mask.validate(Rectangle.emptyRectangle)) {
-												resultSet += rectangle4Mask
+			list.filter(!_.hasPlaceholder(Rectangle.emptyRectangle)).map(
+				elem => {
+					clearBuffers()
+					list map {
+						elem2 => {
+						 	if (elem.leftBorder == elem2.rightBorder && elem2.intersectLeft(elem).isEmpty) 		buffLeft += elem2
+							if (elem.rightBorder == elem2.leftBorder && elem2.intersectRight(elem).isEmpty) 	buffRight += elem2
+							if (elem.topBorder == elem2.bottomBorder && elem2.intersectTop(elem).isEmpty) 		buffTop += elem2
+							if (elem.bottomBorder == elem2.topBorder && elem2.intersectBottom(elem).isEmpty)	buffBottom += elem2
+						}
+					}
+					if(isNotEmpty(buffLeft) && isNotEmpty(buffRight) && isNotEmpty(buffTop) && isNotEmpty(buffBottom)) {
+						buffLeft.map( elemLeft => {
+							buffRight.map( elemRight => {
+								if(elemLeft.intersect(elemRight, (s: String) => s != Rectangle.emptyRectangle.ID).isEmpty) {
+									buffTop.map( elemTop => {
+										buffBottom.map( elemBottom => {
+											if(elemTop.intersect(elemBottom, (s: String) => s != Rectangle.emptyRectangle.ID).isEmpty &&
+												elemLeft.intersectLeft(elemTop).isEmpty &&
+												elemTop.intersectTop(elemRight).isEmpty &&
+												elemRight.intersectRight(elemBottom).isEmpty &&
+												elemBottom.intersectBottom(elemLeft).isEmpty) {
+												var rectangle4Mask = Rectangle4Mask(elemLeft, elemTop, elemRight, elemBottom)
+												if(rectangle4Mask.validate(Rectangle.pruneRectangle)) {
+													resultSet += rectangle4Mask
+												}
 											}
-										}
+										})
 									})
-								})
-							}
+								}
+							})
 						})
-					})
+					}
 				}
-			})
+			)
 			return resultSet
 		}
 		def showRectangleResultSet(list: Iterable[RectIntMask4]): Unit = {
@@ -132,13 +149,14 @@ trait AppInitializer extends AppType {
 				return
 			}
 			list.map(elem => {
-				println(elem.toMatrix.toStringFormat() { (r: RectInt) => (!Rectangle.typeList.contains(r)) })
+				println(elem.toMatrix[RectInt, Int].toStringFormat() { (r: RectInt) => (!Rectangle.typeList.contains(r)) })
 			})
 		}
 
-		var rectangleMatrix = createRectangleMatrix()
-		var rectCombiList = generateRectangleCombinations(rectangleMatrix)
-		var rectPermList = generateRectanglePermutations(rectCombiList)
+		var rectangleData 	= loadRectangleData[List[Int]]()
+		var rectangleMatrix = createRectangleMatrix[List[Int]](rectangleData)
+		var rectCombiList 	= generateRectangleCombinations(rectangleMatrix)
+		var rectPermList 	= generateRectanglePermutations(rectCombiList)
 		showRectangleResultSet(rectPermList)
     }
 
@@ -166,11 +184,11 @@ trait AppInitializer extends AppType {
     	return Source.fromFile(file)(decoder).getLines.to[List].filter(_.trim != "")
     }
 
-	def loadDataFromFile[A] (fileName: String, predicat: (String) => Boolean, process: (String) => A): List[A] = {
+	def loadDataFromFile[A] (filename: String, predicat: (String) => Boolean, process: (String) => A): List[A] = {
 		var result = new ListBuffer[A]()
-		var file = new java.io.File(fileName)
+		var file = new java.io.File(filename)
 		if(!file.exists() || !file.isFile()) {
-			return Nil
+			throw new java.io.FileNotFoundException(s"Cannot find file specified: ${filename}")
 		}
 		for (line <- Source.fromFile(file)(decoder).getLines) {
 			if (predicat(line)) {

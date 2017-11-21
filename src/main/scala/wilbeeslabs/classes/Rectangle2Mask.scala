@@ -85,8 +85,8 @@ class Rectangle2Mask[T <: RectangleMask[Rectangle[Int]]] (
 		return false
 	}
 
-	override def toMatrix: CMatrix[RectInt, Int] = {
-		var matrix = CMatrix[RectInt, Int] (leftTop.topBorderSet.size + rightTop.topBorderSet.size, leftTop.leftBorderSet.size + leftBottom.leftBorderSet.size)
+	override def toMatrix[A >: Null <: Shape[A, B], B: Numeric]: CMatrix[A, B] = {
+		val matrix = CMatrix[RectInt, Int] (leftTop.leftBorderSet.size + leftBottom.leftBorderSet.size, leftTop.topBorderSet.size + rightTop.topBorderSet.size)
 		matrix.fill(tuple2ToList(leftTop.topBorder) :::
 					tuple2ToList(rightTop.topBorder) :::
 					tuple2ToList(leftTop.bottomBorder) :::
@@ -95,7 +95,7 @@ class Rectangle2Mask[T <: RectangleMask[Rectangle[Int]]] (
 					tuple2ToList(rightBottom.topBorder) :::
 					tuple2ToList(leftBottom.bottomBorder) :::
 					tuple2ToList(rightBottom.bottomBorder))
-		return matrix
+		return matrix.asInstanceOf[CMatrix[A, B]]
 	}
 
 	override def toString = s"\n{ Rectangle2Mask => \n\tleftTop: ($leftTop), \n\trightTop: ($rightTop), \n\tleftBottom: ($leftBottom), \n\trightBottom: ($rightBottom) }"

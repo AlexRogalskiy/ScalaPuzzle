@@ -59,8 +59,8 @@ class CMatrix[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int = 1, numCols: 
   	def filterRows(filter: (Row) => Boolean): Matrix = filterBy[Row](this.matrix, filter)
   	def sortRows(sort: (Row, Row) => Boolean): Matrix = sortBy[Row](this.matrix, sort)
   	
-  	def permutate(rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = permutateMatrix(this.matrix, rowFilter, elemPreFilter, elemPostFilter)
-  	def combinate(size: Int, rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = combinateMatrix(this.matrix, size, rowFilter, elemPreFilter, elemPostFilter)
+  	def permute(rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = permuteMatrix(this.matrix, rowFilter, elemPreFilter, elemPostFilter)
+  	def combine(size: Int, rowFilter: (Row) => Boolean = (Row) => true, elemPreFilter: (T) => Boolean = (T) => true, elemPostFilter: (Row) => Boolean = (Row) => true): Matrix = combineMatrix(this.matrix, size, rowFilter, elemPreFilter, elemPostFilter)
  	
 	def *(value: S): Unit 					= multiply(this.matrix, value)
  	def *(matrix2: CMatrix[T, S]): Unit 	= multiplyMatrices(this.matrix, matrix2.matrix)
@@ -242,11 +242,11 @@ class CMatrix[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int = 1, numCols: 
 		}
   	}
 
-  	private def permutateMatrix(matrix: Matrix, f1: (Row) => Boolean, f2: (T) => Boolean, f3: (Row) => Boolean): Matrix = {
+  	private def permuteMatrix(matrix: Matrix, f1: (Row) => Boolean, f2: (T) => Boolean, f3: (Row) => Boolean): Matrix = {
   		return matrix.filter(f1).flatten.filter(f2).permutations.filter(f3).to[List]
   	}
 
-  	private def combinateMatrix(matrix: Matrix, size: Int, f1: (Row) => Boolean, f2: (T) => Boolean, f3: (Row) => Boolean): Matrix = {
+  	private def combineMatrix(matrix: Matrix, size: Int, f1: (Row) => Boolean, f2: (T) => Boolean, f3: (Row) => Boolean): Matrix = {
   		return matrix.filter(f1).flatten.filter(f2).combinations(size).filter(f3).to[List]
   	}
 
@@ -267,11 +267,10 @@ class CMatrix[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int = 1, numCols: 
     	this.update(i2, j2, temp1)
 	}
 
-    private def swapByValue[T] (elem1: T, elem2: T, list: List[T]): List[T] = {
+    private def swapByValue(elem1: T, elem2: T, list: List[T]): List[T] = {
     	list map {
-			case item if item == elem1 => elem2
-    		case item if item == elem2 => elem1
-    		//case item: List[T] => swap(elem1, elem2, item)
+			case item if (item == elem1) => elem2
+    		case item if (item == elem2) => elem1
     		case item => item
 		}
 	}
@@ -283,5 +282,5 @@ class CMatrix[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int = 1, numCols: 
 }
 
 object CMatrix {
-	implicit def apply[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int, numCols: Int): CMatrix[T, S] = new CMatrix[T, S](numRows, numCols)
+	implicit def apply[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int, numCols: Int): CMatrix[T, S] = new CMatrix[T, S] (numRows, numCols)
 }

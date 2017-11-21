@@ -80,19 +80,19 @@ class RectangleMask[T <: Rectangle[Int]] (
 
 	def validate(placeHolder: T): Boolean = {
 		val defaultMaxBoundValue: Int = 10
-		def isPerimeterValid(): Boolean = {
+		def isBoundValid(): Boolean = {
 			return (this.lValue <= defaultMaxBoundValue &&
 					this.tValue <= defaultMaxBoundValue &&
 					this.rValue <= defaultMaxBoundValue &&
 					this.bValue <= defaultMaxBoundValue)
 		}
 		def isFullValid(): Boolean = {
-			if(this.cValue == defaultMaxBoundValue && isPerimeterValid())
+			if(this.cValue == defaultMaxBoundValue && isBoundValid())
 				return true
 			return false
 		}
 		def isPartialValid(): Boolean = {
-			if(this.cValue <= defaultMaxBoundValue && isPerimeterValid())
+			if(this.cValue <= defaultMaxBoundValue && isBoundValid())
 				return true
 			return false
 		}
@@ -101,10 +101,10 @@ class RectangleMask[T <: Rectangle[Int]] (
 		return isFullValid()
 	}
 
-	override def toMatrix: CMatrix[RectInt, Int] = {
-		var matrix = CMatrix[RectInt, Int](topBorderSet.size, leftBorderSet.size)
+	override def toMatrix[A >: Null <: Shape[A, B], B: Numeric]: CMatrix[A, B] = {
+		val matrix = CMatrix[RectInt, Int](leftBorderSet.size, topBorderSet.size)
 		matrix.fill(tuple4ToList[T](this.border))
-		return matrix
+		return matrix.asInstanceOf[CMatrix[A, B]]
 	}
 
 	override def toString = s"\n{ RectangleMask => \nleftTop: ($lTop), \nrightTop: ($rTop), \nleftBottom: ($lBottom), \nrightBottom: ($rBottom) }"

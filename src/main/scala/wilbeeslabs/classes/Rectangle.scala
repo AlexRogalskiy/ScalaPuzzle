@@ -35,10 +35,10 @@ import wildbeeslabs.traits.AppType
  * param <T>
  */
 class Rectangle[T: Numeric] (
-	private var leftBottom: T,
-	private var leftTop: T,
-	private var rightTop: T,
-	private var rightBottom: T) extends Shape[Rectangle[T], T] {
+	private var leftBottom: T = 0,
+	private var leftTop: T = 0,
+	private var rightTop: T = 0,
+	private var rightBottom: T = 0) extends Shape[Rectangle[T], T] {
 	
 	import Numeric.Implicits._
 	private var placeHolder: Boolean = false
@@ -126,9 +126,9 @@ class Rectangle[T: Numeric] (
 } 
 
 object Rectangle extends AppType {
-	private val defaultPruneRectangle: RectInt = new Rectangle[Int](0, 0, 0, 0)
+	private val defaultPruneRectangle: RectInt = new Rectangle[Int]()
 	defaultPruneRectangle.setPlaceHolder(true)
-	private val defaultEmptyRectangle: RectInt = new Rectangle[Int](0, 0, 0, 0)
+	private val defaultEmptyRectangle: RectInt = new Rectangle[Int]()
 
 	implicit def apply(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int) = init(leftBottom, leftTop, rightTop, rightBottom)
 	def init(leftBottom: Int, leftTop: Int, rightTop: Int, rightBottom: Int): RectInt = new Rectangle[Int] (leftBottom, leftTop, rightTop, rightBottom)
