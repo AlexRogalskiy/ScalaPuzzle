@@ -34,7 +34,7 @@ import wildbeeslabs.classes.CMatrix._
  * @author Alex
  * @version 1.0.0
  * @since 2017-11-16
- * param <T>
+ * @param <T>
  */
 class RectangleMask[T <: Rectangle[Int]] (
 	private var leftBottom: T,

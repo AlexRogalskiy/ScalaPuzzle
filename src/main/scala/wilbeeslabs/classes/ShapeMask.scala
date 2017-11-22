@@ -32,8 +32,8 @@ import wildbeeslabs.classes.CMatrix._
  * @author Alex
  * @version 1.0.0
  * @since 2017-11-16
- * param <T>
- * param <S>
+ * @param <T>
+ * @param <S>
  */
 abstract class ShapeMask[T <: ShapeMask[T, S], S >: Null <: Any] {
  	def diff(shapeMask2: T, f: (S) => Boolean = (S) => true): Set[S]

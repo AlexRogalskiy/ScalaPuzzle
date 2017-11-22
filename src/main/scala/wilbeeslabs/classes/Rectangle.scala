@@ -32,7 +32,7 @@ import wildbeeslabs.traits.AppType
  * @author Alex
  * @version 1.0.0
  * @since 2017-11-16
- * param <T>
+ * @param <T>
  */
 class Rectangle[T: Numeric] (
 	private var leftBottom: T = 0,

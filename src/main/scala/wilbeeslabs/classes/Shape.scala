@@ -30,8 +30,8 @@ package wildbeeslabs.classes
  * @author Alex
  * @version 1.0.0
  * @since 2017-11-16
- * param <T>
- * param <S>
+ * @param <T>
+ * @param <S>
  */
 abstract class Shape[T <: Shape[T, S], S: Numeric] {
 	protected val uuid: String = java.util.UUID.randomUUID.toString

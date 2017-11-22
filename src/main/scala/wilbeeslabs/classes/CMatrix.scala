@@ -33,8 +33,8 @@ import scala.collection.mutable.ListBuffer
  * @author Alex
  * @version 1.0.0
  * @since 2017-11-16
- * param <T>
- * param <S>
+ * @param <T>
+ * @param <S>
  */
 class CMatrix[T >: Null <: Shape[T, S], S: Numeric] (numRows: Int = 1, numCols: Int = 1) {
 	/* Matrix type aliases */
